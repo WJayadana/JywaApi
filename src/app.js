@@ -1,4 +1,5 @@
 const express = require('express');
+const crypto = require('node:crypto');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const fs = require('fs');
@@ -6,12 +7,44 @@ const path = require('path');
 
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
+const digiflazzRoutes = require('./routes/digiflazz');
+const config = require('./config');
 const db = require('./db');
 
 const app = express();
 
 app.disable('x-powered-by');
 app.use(cors());
+
+// Webhook must consume the RAW body for HMAC verification — mount it
+// BEFORE the global express.json() so the stream isn't consumed twice.
+app.post(
+  '/api/digiflazz/webhook',
+  express.raw({ type: 'application/json', limit: '100kb' }),
+  (req, res) => {
+    if (!config.digiflazz.webhookSecret) {
+      return res.status(503).json({ error: 'ServiceUnavailable', message: 'DIGIFLAZZ_WEBHOOK_SECRET is not configured' });
+    }
+    const sigHeader = req.headers['x-hub-signature'];
+    if (!sigHeader || typeof sigHeader !== 'string') {
+      return res.status(401).json({ error: 'Unauthorized', message: 'missing X-Hub-Signature' });
+    }
+    const raw = Buffer.isBuffer(req.body) ? req.body : Buffer.from(String(req.body));
+    const expected = 'sha1=' + crypto.createHmac('sha1', config.digiflazz.webhookSecret).update(raw).digest('hex');
+    const sig = sigHeader.trim();
+    if (sig.length !== expected.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(expected))) {
+      return res.status(401).json({ error: 'Unauthorized', message: 'invalid signature' });
+    }
+    let parsed = null;
+    try { parsed = JSON.parse(raw.toString()); } catch (_e) { /* leave null */ }
+    return res.status(200).json({
+      received: true,
+      event: req.headers['x-digiflazz-event'] || null,
+      data: (parsed && parsed.data) || parsed || null,
+    });
+  }
+);
+
 app.use(express.json({ limit: '100kb' }));
 
 const authLimiter = rateLimit({
@@ -50,6 +83,7 @@ app.get('/docs', (_req, res) => {
 
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/digiflazz', digiflazzRoutes);
 
 app.use((_req, res) => {
   res.status(404).json({ error: 'NotFound', message: 'route not found' });

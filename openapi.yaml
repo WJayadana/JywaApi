@@ -27,6 +27,8 @@ tags:
     description: Profil user dan riwayat mutasi
   - name: Owner
     description: Endpoint khusus role owner
+  - name: Digiflazz
+    description: Provider PPOB Digiflazz (khusus owner)
 paths:
   /:
     get:
@@ -450,6 +452,176 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/digiflazz/saldo:
+    get:
+      operationId: getDigiflazzSaldo
+      tags: [Digiflazz]
+      summary: Cek saldo Digiflazz
+      description: Proxy ke endpoint cek-saldo Digiflazz. Hanya role owner.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Saldo deposit Digiflazz
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deposit:
+                    type: number
+              example:
+                deposit: 500000000
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '502':
+          $ref: '#/components/responses/ProviderError'
+  /api/digiflazz/harga:
+    get:
+      operationId: getDigiflazzHarga
+      tags: [Digiflazz]
+      summary: Daftar harga produk Digiflazz
+      description: Mengambil daftar harga prepaid atau pasca. Hanya role owner.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cmd
+          in: query
+          schema:
+            type: string
+            enum: [prepaid, pasca]
+            default: prepaid
+      responses:
+        '200':
+          description: Daftar produk
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [products]
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DigiflazzProduct'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '502':
+          $ref: '#/components/responses/ProviderError'
+  /api/digiflazz/deposit:
+    post:
+      operationId: createDigiflazzDeposit
+      tags: [Digiflazz]
+      summary: Buat tiket deposit Digiflazz
+      description: Hanya role owner.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DigiflazzDepositRequest'
+            example:
+              amount: 100000
+              bank: BCA
+              owner_name: Jayadana
+      responses:
+        '200':
+          description: Tiket deposit berhasil dibuat
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '502':
+          $ref: '#/components/responses/ProviderError'
+  /api/digiflazz/transaksi:
+    post:
+      operationId: createDigiflazzTransaction
+      tags: [Digiflazz]
+      summary: Transaksi PPOB Digiflazz
+      description: Topup prepaid atau inquiry/payment/status pascabayar. Hanya role owner.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DigiflazzTransactionRequest'
+            example:
+              sku: xld25
+              customer_no: '08123456789'
+              ref_id: trx-001
+              testing: true
+      responses:
+        '200':
+          description: Response transaksi dari Digiflazz
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '502':
+          $ref: '#/components/responses/ProviderError'
+  /api/digiflazz/webhook:
+    post:
+      operationId: receiveDigiflazzWebhook
+      tags: [Digiflazz]
+      summary: Terima webhook Digiflazz
+      description: Endpoint publik yang memverifikasi X-Hub-Signature dengan HMAC-SHA1.
+      security: []
+      parameters:
+        - name: X-Hub-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+            example: sha1=...
+        - name: X-Digiflazz-Event
+          in: header
+          schema:
+            type: string
+            example: update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [data]
+              properties:
+                data:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '200':
+          description: Webhook diterima
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          description: Webhook secret belum dikonfigurasi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   securitySchemes:
     bearerAuth:
@@ -528,7 +700,64 @@ components:
           example:
             status: error
             service: jywa-api
+    ProviderError:
+      description: Error dari provider Digiflazz (upstream)
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [error, message]
+            properties:
+              error:
+                type: string
+                example: DigiflazzError
+              message:
+                type: string
+              code:
+                type: string
   schemas:
+    DigiflazzProduct:
+      type: object
+      additionalProperties: true
+      properties:
+        buyer_sku_code:
+          type: string
+        product_name:
+          type: string
+        price:
+          type: number
+        buyer_product_status:
+          type: boolean
+        seller_product_status:
+          type: boolean
+    DigiflazzDepositRequest:
+      type: object
+      required: [amount, bank, owner_name]
+      properties:
+        amount:
+          type: integer
+          minimum: 1
+        bank:
+          type: string
+          description: BCA, MANDIRI, BRI, BNI, Flip, atau ShopeePay sesuai akun Digiflazz
+        owner_name:
+          type: string
+    DigiflazzTransactionRequest:
+      type: object
+      required: [sku, customer_no, ref_id]
+      properties:
+        sku:
+          type: string
+          description: buyer_sku_code
+        customer_no:
+          type: string
+        ref_id:
+          type: string
+        commands:
+          type: string
+          enum: [inq-pasca, pay-pasca, status-pasca]
+        testing:
+          type: boolean
     ApiInfo:
       type: object
       properties:

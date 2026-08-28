@@ -264,7 +264,7 @@
     .copy-btn:hover { background: var(--color-bg); color: var(--color-text); }
     .copy-btn.copied { color: var(--color-brand-deep); }
     .code-block pre {
-      padding: 14px; overflow-x: auto;
+      padding: 14px; overflow-x: auto; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere;
       font-family: var(--font-mono); font-size: 13px; line-height: 1.6;
       color: var(--color-text);
     }
@@ -302,6 +302,39 @@
     .schema-table td:first-child { font-family: var(--font-mono); font-weight: 500; color: var(--color-text); }
     .schema-type { font-family: var(--font-mono); font-size: 11px; color: var(--color-blue); }
     .schema-enum { font-family: var(--font-mono); font-size: 11px; color: var(--color-amber); }
+
+    /* ===== Try It / Execution ===== */
+    .try-it { margin-top: 20px; border-top: 1px dashed var(--color-border-strong); padding-top: 16px; }
+    .try-it-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-brand-deep); margin-bottom: 12px; }
+    .try-note { font-size: 12px; color: var(--color-text-faint); margin: 6px 0 10px; }
+    .try-field { margin-bottom: 10px; min-width: 0; }
+    .try-field label { display: block; font-family: var(--font-mono); font-size: 11px; color: var(--color-text-muted); margin-bottom: 4px; }
+    .try-input { width: 100%; padding: 8px 12px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-sm); font-family: var(--font-mono); font-size: 13px; background: var(--color-bg); color: var(--color-text); }
+    .try-input:focus { outline: none; border-color: var(--color-brand); box-shadow: 0 0 0 1px var(--color-brand); }
+    .try-textarea { min-height: 140px; resize: vertical; }
+    .try-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+    .execute-btn { background: var(--color-brand); color: #0d0d0d; font-weight: 600; border: none; border-radius: 9999px; padding: 9px 22px; cursor: pointer; font-size: 13px; font-family: var(--font-sans); transition: opacity 0.15s; }
+    .execute-btn:hover { opacity: 0.85; }
+    .execute-btn:disabled { opacity: 0.5; cursor: default; }
+    .try-response { margin-top: 14px; }
+    .status-5xx { background: var(--color-red-bg); color: var(--color-red); }
+    .try-error { font-size: 13px; color: var(--color-red); background: var(--color-red-bg); padding: 10px 14px; border-radius: var(--radius-sm); }
+    .try-token-saved { font-size: 12px; color: var(--color-brand-deep); margin: 8px 0; }
+
+    .token-panel { border: 1px solid rgba(24,226,153,0.25); background: var(--color-brand-tint); border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 32px; }
+    .token-panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .token-panel-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-brand-deep); }
+    .token-state { font-size: 12px; color: var(--color-brand-deep); }
+    .token-panel-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .token-panel-row .try-input { flex: 1; min-width: 200px; }
+
+    /* ===== Overflow fixes (mobile expand bug) ===== */
+    html, body { overflow-x: hidden; }
+    .main { min-width: 0; }
+    .endpoint-path { word-break: break-all; min-width: 0; }
+    .endpoint-body { min-width: 0; }
+    .params-table, .schema-table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .code-block pre { max-width: 100%; }
 
     /* ===== Mobile ===== */
     .sidebar-overlay {
@@ -368,6 +401,14 @@
         <a class="nav-item" data-target="balance"><span class="method-badge method-post">POST</span> /api/users/:id/balance</a>
         <a class="nav-item" data-target="user-mutations"><span class="method-badge method-get">GET</span> /api/users/:id/mutations</a>
       </div>
+      <div class="nav-section" data-section="digiflazz">
+        <div class="nav-section-title">Digiflazz</div>
+        <a class="nav-item" data-target="digi-saldo"><span class="method-badge method-get">GET</span> /api/digiflazz/saldo</a>
+        <a class="nav-item" data-target="digi-harga"><span class="method-badge method-get">GET</span> /api/digiflazz/harga</a>
+        <a class="nav-item" data-target="digi-deposit"><span class="method-badge method-post">POST</span> /api/digiflazz/deposit</a>
+        <a class="nav-item" data-target="digi-transaksi"><span class="method-badge method-post">POST</span> /api/digiflazz/transaksi</a>
+        <a class="nav-item" data-target="digi-webhook"><span class="method-badge method-post">POST</span> /api/digiflazz/webhook</a>
+      </div>
       <div class="nav-section" data-section="schemas">
         <div class="nav-section-title">Schemas</div>
         <a class="nav-item" data-target="schema-user">User</a>
@@ -416,12 +457,28 @@
         </div>
       </div>
 
+      <!-- ===== TOKEN PANEL ===== -->
+      <div class="token-panel" id="token-panel">
+        <div class="token-panel-head">
+          <span class="token-panel-title">🔑 Auth Token</span>
+          <span class="token-state" id="token-state">— belum ada token —</span>
+        </div>
+        <div class="token-panel-row">
+          <input class="try-input" id="token-input" type="password" placeholder="Bearer JWT token (auto-saved dari register/login)" />
+          <button class="execute-btn" onclick="saveToken()">Save</button>
+          <button class="execute-btn" onclick="clearToken()" style="background:var(--color-surface-alt);color:var(--color-text-muted);">Clear</button>
+        </div>
+        <p class="try-note">Token disimpan di localStorage browser. Register atau Login via Try It di bawah untuk auto-save.</p>
+      </div>
+
+      <!-- ===== SECTIONS START ===== -->
+
       <!-- ===== SYSTEM ===== -->
       <div class="section" id="system">
         <div class="section-header"><h2>System</h2><span class="section-tag">Publik</span></div>
         <p class="section-desc">Endpoint metadata dan health check API.</p>
 
-        <div class="endpoint" id="root">
+        <div class="endpoint" id="root" data-method="GET" data-path="/" data-auth="false">
           <div class="endpoint-header" onclick="toggleEndpoint(this)">
             <span class="endpoint-method method-get">GET</span>
             <span class="endpoint-path">/</span>
@@ -444,7 +501,7 @@
           </div>
         </div>
 
-        <div class="endpoint" id="health">
+        <div class="endpoint" id="health" data-method="GET" data-path="/health" data-auth="false">
           <div class="endpoint-header" onclick="toggleEndpoint(this)">
             <span class="endpoint-method method-get">GET</span>
             <span class="endpoint-path">/health</span>
@@ -480,7 +537,7 @@
         <div class="section-header"><h2>Auth</h2><span class="section-tag">Publik · Rate-limited</span></div>
         <p class="section-desc">Registrasi dan login. Rate limit: 30 request per 15 menit per IP.</p>
 
-        <div class="endpoint" id="register">
+        <div class="endpoint" id="register" data-method="POST" data-path="/api/auth/register" data-auth="false" data-savetoken="true" data-body="username,email,phone,password">
           <div class="endpoint-header" onclick="toggleEndpoint(this)">
             <span class="endpoint-method method-post">POST</span>
             <span class="endpoint-path">/api/auth/register</span>
@@ -540,7 +597,7 @@
           </div>
         </div>
 
-        <div class="endpoint" id="login">
+        <div class="endpoint" id="login" data-method="POST" data-path="/api/auth/login" data-auth="false" data-savetoken="true" data-body="username,password">
           <div class="endpoint-header" onclick="toggleEndpoint(this)">
             <span class="endpoint-method method-post">POST</span>
             <span class="endpoint-path">/api/auth/login</span>
@@ -602,7 +659,7 @@
         <div class="section-header"><h2>Users</h2><span class="section-tag">Auth Required</span></div>
         <p class="section-desc">Profil user dan riwayat mutasi saldo sendiri.</p>
 
-        <div class="endpoint" id="get-me">
+        <div class="endpoint" id="get-me" data-method="GET" data-path="/api/users/me" data-auth="true">
           <div class="endpoint-header" onclick="toggleEndpoint(this)">
             <span class="endpoint-method method-get">GET</span>
             <span class="endpoint-path">/api/users/me</span>
@@ -638,7 +695,7 @@
           </div>
         </div>
 
-        <div class="endpoint" id="update-me">
+        <div class="endpoint" id="update-me" data-method="PUT" data-path="/api/users/me" data-auth="true" data-body="username,email,phone">
           <div class="endpoint-header" onclick="toggleEndpoint(this)">
             <span class="endpoint-method method-put">PUT</span>
             <span class="endpoint-path">/api/users/me</span>
@@ -666,7 +723,7 @@
           </div>
         </div>
 
-        <div class="endpoint" id="my-mutations">
+        <div class="endpoint" id="my-mutations" data-method="GET" data-path="/api/users/me/mutations" data-auth="true" data-query="page,limit,type">
           <div class="endpoint-header" onclick="toggleEndpoint(this)">
             <span class="endpoint-method method-get">GET</span>
             <span class="endpoint-path">/api/users/me/mutations</span>
@@ -719,7 +776,7 @@
         <div class="section-header"><h2>Owner Only</h2><span class="section-tag">Role: owner</span></div>
         <p class="section-desc">Endpoint admin untuk manajemen user dan saldo. Hanya role <code>owner</code>.</p>
 
-        <div class="endpoint" id="list-users">
+        <div class="endpoint" id="list-users" data-method="GET" data-path="/api/users" data-auth="true" data-query="page,limit,role,status,search">
           <div class="endpoint-header" onclick="toggleEndpoint(this)">
             <span class="endpoint-method method-get">GET</span>
             <span class="endpoint-path">/api/users</span>
@@ -741,7 +798,7 @@
           </div>
         </div>
 
-        <div class="endpoint" id="get-user">
+        <div class="endpoint" id="get-user" data-method="GET" data-path="/api/users/:id" data-auth="true" data-params="id">
           <div class="endpoint-header" onclick="toggleEndpoint(this)">
             <span class="endpoint-method method-get">GET</span>
             <span class="endpoint-path">/api/users/:id</span>
@@ -757,7 +814,7 @@
           </div>
         </div>
 
-        <div class="endpoint" id="update-user">
+        <div class="endpoint" id="update-user" data-method="PUT" data-path="/api/users/:id" data-auth="true" data-params="id" data-body="username,email,phone,role,status">
           <div class="endpoint-header" onclick="toggleEndpoint(this)">
             <span class="endpoint-method method-put">PUT</span>
             <span class="endpoint-path">/api/users/:id</span>
@@ -787,7 +844,7 @@
           </div>
         </div>
 
-        <div class="endpoint" id="ban-user">
+        <div class="endpoint" id="ban-user" data-method="DELETE" data-path="/api/users/:id" data-auth="true" data-params="id">
           <div class="endpoint-header" onclick="toggleEndpoint(this)">
             <span class="endpoint-method method-delete">DEL</span>
             <span class="endpoint-path">/api/users/:id</span>
@@ -806,7 +863,7 @@
           </div>
         </div>
 
-        <div class="endpoint" id="balance">
+        <div class="endpoint" id="balance" data-method="POST" data-path="/api/users/:id/balance" data-auth="true" data-params="id" data-body="type,direction,amount,note,ref_id">
           <div class="endpoint-header" onclick="toggleEndpoint(this)">
             <span class="endpoint-method method-post">POST</span>
             <span class="endpoint-path">/api/users/:id/balance</span>
@@ -862,7 +919,7 @@
           </div>
         </div>
 
-        <div class="endpoint" id="user-mutations">
+        <div class="endpoint" id="user-mutations" data-method="GET" data-path="/api/users/:id/mutations" data-auth="true" data-params="id" data-query="page,limit,type">
           <div class="endpoint-header" onclick="toggleEndpoint(this)">
             <span class="endpoint-method method-get">GET</span>
             <span class="endpoint-path">/api/users/:id/mutations</span>
@@ -871,6 +928,86 @@
           </div>
           <div class="endpoint-body">
             <p class="endpoint-desc">Riwayat mutasi user lain. Parameter sama seperti <code>/api/users/me/mutations</code>.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== DIGIFLAZZ ===== -->
+      <div class="section" id="digiflazz-section">
+        <div class="section-header"><h2>Digiflazz</h2><span class="section-tag">Provider PPOB · Role: owner</span></div>
+        <p class="section-desc">Proxy ke provider Digiflazz untuk cek saldo, daftar harga, tiket deposit, dan transaksi PPOB (prepaid &amp; pascabayar). Semua endpoint kecuali <code>/webhook</code> memerlukan Bearer JWT dan role <code>owner</code>.</p>
+
+        <div class="endpoint" id="digi-saldo" data-method="GET" data-path="/api/digiflazz/saldo" data-auth="true">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-get">GET</span>
+            <span class="endpoint-path">/api/digiflazz/saldo</span>
+            <span class="endpoint-summary">Cek saldo Digiflazz</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Proxy ke endpoint <code>/cek-saldo</code> Digiflazz. Mengembalikan sisa deposit akun.</p>
+            <div class="response-block">
+              <span class="response-status status-2xx">200 OK</span>
+              <div class="code-block"><div class="code-block-header"><span class="code-block-label">Response</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><pre><code>{ "deposit": 500000000 }</code></pre></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="endpoint" id="digi-harga" data-method="GET" data-path="/api/digiflazz/harga" data-auth="true" data-query="cmd">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-get">GET</span>
+            <span class="endpoint-path">/api/digiflazz/harga</span>
+            <span class="endpoint-summary">Daftar harga produk</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Mengambil daftar harga dari Digiflazz. Query: <code>cmd=prepaid</code> atau <code>cmd=pasca</code>. Default: <code>prepaid</code>.</p>
+            <div class="params-title">Query Parameters</div>
+            <table class="params-table"><thead><tr><th>Param</th><th>Type</th><th>Default</th><th>Deskripsi</th></tr></thead><tbody><tr><td>cmd</td><td><span class="param-type">enum</span></td><td>prepaid</td><td><code>prepaid</code> atau <code>pasca</code></td></tr></tbody></table>
+          </div>
+        </div>
+
+        <div class="endpoint" id="digi-deposit" data-method="POST" data-path="/api/digiflazz/deposit" data-auth="true" data-body="amount,bank,owner_name">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-post">POST</span>
+            <span class="endpoint-path">/api/digiflazz/deposit</span>
+            <span class="endpoint-summary">Buat tiket deposit</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Membuat tiket deposit di Digiflazz. Bank sesuai dengan akun: BCA / MANDIRI / BRI / BNI (Perusahaan) atau Flip / ShopeePay (Perorangan).</p>
+            <div class="params-title">Request Body</div>
+            <table class="params-table"><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Deskripsi</th></tr></thead><tbody><tr><td>amount<span class="param-required">*</span></td><td><span class="param-type">integer</span></td><td>Ya</td><td>Nominal dalam Rupiah</td></tr><tr><td>bank<span class="param-required">*</span></td><td><span class="param-type">string</span></td><td>Ya</td><td>BCA / MANDIRI / BRI / BNI / Flip / ShopeePay</td></tr><tr><td>owner_name<span class="param-required">*</span></td><td><span class="param-type">string</span></td><td>Ya</td><td>Nama pemilik rekening pengirim</td></tr></tbody></table>
+          </div>
+        </div>
+
+        <div class="endpoint" id="digi-transaksi" data-method="POST" data-path="/api/digiflazz/transaksi" data-auth="true" data-body="sku,customer_no,ref_id,commands,testing">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-post">POST</span>
+            <span class="endpoint-path">/api/digiflazz/transaksi</span>
+            <span class="endpoint-summary">Transaksi PPOB</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Topup prepaid atau inquiry/payment/status pascabayar. <code>commands</code> untuk pascabayar: <code>inq-pasca</code>, <code>pay-pasca</code>, <code>status-pasca</code>. Untuk prepaid, kosongkan <code>commands</code>. Set <code>testing=true</code> untuk transaksi development.</p>
+            <div class="params-title">Request Body</div>
+            <table class="params-table"><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Deskripsi</th></tr></thead><tbody><tr><td>sku<span class="param-required">*</span></td><td><span class="param-type">string</span></td><td>Ya</td><td><code>buyer_sku_code</code> dari daftar harga</td></tr><tr><td>customer_no<span class="param-required">*</span></td><td><span class="param-type">string</span></td><td>Ya</td><td>Nomor pelanggan / tujuan</td></tr><tr><td>ref_id<span class="param-required">*</span></td><td><span class="param-type">string</span></td><td>Ya</td><td>ID referansi unik Anda</td></tr><tr><td>commands</td><td><span class="param-type">enum</span></td><td>Tidak</td><td><code>inq-pasca</code> · <code>pay-pasca</code> · <code>status-pasca</code></td></tr><tr><td>testing</td><td><span class="param-type">boolean</span></td><td>Tidak</td><td><code>true</code> untuk development</td></tr></tbody></table>
+          </div>
+        </div>
+
+        <div class="endpoint" id="digi-webhook" data-method="POST" data-path="/api/digiflazz/webhook" data-auth="false">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-post">POST</span>
+            <span class="endpoint-path">/api/digiflazz/webhook</span>
+            <span class="endpoint-summary">Webhook receiver</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Endpoint publik yang dilindungi oleh HMAC-SHA1. Header yang diharapkan: <code>X-Hub-Signature: sha1=&lt;hex&gt;</code> dan opsional <code>X-Digiflazz-Event</code>. Signature dihitung dari raw body menggunakan webhook secret.</p>
+            <div class="response-block">
+              <span class="response-status status-4xx">401 Unauthorized</span>
+              <div class="code-block"><div class="code-block-header"><span class="code-block-label">Signature salah / hilang</span></div><pre><code>{ "error": "Unauthorized", "message": "invalid signature" }</code></pre></div>
+            </div>
           </div>
         </div>
       </div>
@@ -1036,6 +1173,175 @@
       sidebar.classList.remove('open');
       overlay.classList.remove('show');
     });
+
+
+    // ===== TRY IT / EXECUTE =====
+    const API_BASE = location.origin;
+    const tokenInput = document.getElementById('token-input');
+    const tokenState = document.getElementById('token-state');
+
+    function getStoredToken() { return localStorage.getItem('jywa_api_token') || ''; }
+    function saveToken() {
+      const t = tokenInput.value.trim();
+      if (t) { localStorage.setItem('jywa_api_token', t); updateTokenState(); }
+    }
+    function clearToken() {
+      localStorage.removeItem('jywa_api_token');
+      tokenInput.value = '';
+      updateTokenState();
+    }
+    function updateTokenState() {
+      const t = getStoredToken();
+      if (t) {
+        tokenState.textContent = '✓ token tersimpan (' + t.slice(0,12) + '...)';
+        tokenInput.value = t;
+      } else {
+        tokenState.textContent = '— belum ada token —';
+      }
+    }
+    updateTokenState();
+
+    // Generate Try It panels for all endpoints with data-method
+    document.querySelectorAll('.endpoint[data-method]').forEach(ep => {
+      const method = ep.dataset.method;
+      const apiPath = ep.dataset.path;
+      const needsAuth = ep.dataset.auth === 'true';
+      const saveTokenFlag = ep.dataset.savetoken === 'true';
+      const pathParams = (ep.dataset.params || '').split(',').filter(Boolean);
+      const queryParams = (ep.dataset.query || '').split(',').filter(Boolean);
+      const bodyFields = (ep.dataset.body || '').split(',').filter(Boolean);
+      const bodyId = ep.id + '-body';
+      const respId = ep.id + '-response';
+
+      let html = '<div class="try-it">';
+      html += '<div class="try-it-title">⚡ Try It</div>';
+
+      // Path params
+      if (pathParams.length) {
+        html += '<p class="try-note">Path Parameters:</p>';
+        html += '<div class="try-grid">';
+        pathParams.forEach(p => {
+          html += '<div class="try-field"><label>' + p + '</label><input class="try-input" id="' + ep.id + '-param-' + p + '" placeholder="' + p + '" /></div>';
+        });
+        html += '</div>';
+      }
+
+      // Query params
+      if (queryParams.length) {
+        html += '<p class="try-note">Query Parameters:</p>';
+        html += '<div class="try-grid">';
+        queryParams.forEach(q => {
+          const ph = q === 'type' ? 'deposit|pembelian|refund' : q === 'role' ? 'bronze|silver|gold|reseller' : q === 'status' ? 'active|suspended|banned' : q;
+          html += '<div class="try-field"><label>' + q + '</label><input class="try-input" id="' + ep.id + '-query-' + q + '" placeholder="' + ph + '" /></div>';
+        });
+        html += '</div>';
+      }
+
+      // Body
+      if (bodyFields.length) {
+        const defaultBody = {};
+        bodyFields.forEach(f => {
+          if (f === 'amount') defaultBody[f] = 50000;
+          else if (f === 'type') defaultBody[f] = 'deposit';
+          else if (f === 'direction') defaultBody[f] = '+';
+          else if (f === 'note') defaultBody[f] = 'test note';
+          else if (f === 'ref_id') defaultBody[f] = 'test-001';
+          else defaultBody[f] = '';
+        });
+        html += '<p class="try-note">Request Body (JSON):</p>';
+        html += '<div class="try-field"><textarea class="try-input try-textarea" id="' + bodyId + '">' + JSON.stringify(defaultBody, null, 2) + '</textarea></div>';
+      }
+
+      // Execute button
+      html += '<button class="execute-btn" onclick="executeRequest(\''+ep.id+'\',\''+method+'\',\''+apiPath+'\','+needsAuth+','+saveTokenFlag+','+JSON.stringify(pathParams)+','+JSON.stringify(queryParams)+','+(bodyFields.length > 0)+')">Execute</button>';
+
+      // Response area
+      html += '<div class="try-response" id="' + respId + '"></div>';
+      html += '</div>';
+
+      const bodyEl = ep.querySelector('.endpoint-body');
+      if (bodyEl) bodyEl.insertAdjacentHTML('beforeend', html);
+    });
+
+    async function executeRequest(epId, method, apiPath, needsAuth, saveTokenFlag, pathParams, queryParams, hasBody) {
+      const ep = document.getElementById(epId);
+      const respEl = document.getElementById(epId + '-response');
+      const btn = ep.querySelector('.execute-btn');
+      btn.disabled = true;
+      btn.textContent = 'Executing...';
+      respEl.innerHTML = '';
+
+      // Build path
+      let url = API_BASE + apiPath;
+      pathParams.forEach(p => {
+        const val = document.getElementById(epId + '-param-' + p).value.trim();
+        if (val) url = url.replace(':' + p, encodeURIComponent(val));
+      });
+
+      // Build query string
+      const qParts = [];
+      queryParams.forEach(q => {
+        const val = document.getElementById(epId + '-query-' + q).value.trim();
+        if (val) qParts.push(encodeURIComponent(q) + '=' + encodeURIComponent(val));
+      });
+      if (qParts.length) url += '?' + qParts.join('&');
+
+      // Build options
+      const opts = { method: method, headers: {} };
+      if (needsAuth) {
+        const token = getStoredToken();
+        if (!token) {
+          respEl.innerHTML = '<div class="try-error">⚠ Belum ada token. Save token dulu di panel Auth Token di atas, atau Login/Register.</div>';
+          btn.disabled = false; btn.textContent = 'Execute'; return;
+        }
+        opts.headers['Authorization'] = 'Bearer ' + token;
+      }
+      if (hasBody) {
+        const bodyText = document.getElementById(epId + '-body').value.trim();
+        try {
+          JSON.parse(bodyText); // validate
+        } catch(e) {
+          respEl.innerHTML = '<div class="try-error">⚠ JSON tidak valid: ' + e.message + '</div>';
+          btn.disabled = false; btn.textContent = 'Execute'; return;
+        }
+        opts.headers['Content-Type'] = 'application/json';
+        opts.body = bodyText;
+      }
+
+      const t0 = performance.now();
+      try {
+        const res = await fetch(url, opts);
+        const elapsed = Math.round(performance.now() - t0);
+        const text = await res.text();
+        let formatted = text;
+        try { formatted = JSON.stringify(JSON.parse(text), null, 2); } catch(e) {}
+
+        const statusClass = res.status < 300 ? 'status-2xx' : res.status < 500 ? 'status-4xx' : 'status-5xx';
+        let html = '<div class="response-block"><span class="response-status ' + statusClass + '">' + res.status + ' ' + (res.statusText||'') + '</span> <span class="try-note">— ' + elapsed + 'ms</span></div>';
+        html += '<div class="code-block"><div class="code-block-header"><span class="code-block-label">Response Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div><pre><code>' + escapeHtml(formatted) + '</code></pre></div>';
+        respEl.innerHTML = html;
+
+        // Auto-save token from register/login
+        if (saveTokenFlag && res.status >= 200 && res.status < 300) {
+          try {
+            const data = JSON.parse(text);
+            if (data.token) {
+              localStorage.setItem('jywa_api_token', data.token);
+              updateTokenState();
+              respEl.innerHTML += '<div class="try-token-saved">✓ Token auto-saved! Endpoint lain yang butuh auth sekarang bisa dipakai.</div>';
+            }
+          } catch(e) {}
+        }
+      } catch(err) {
+        respEl.innerHTML = '<div class="try-error">⚠ Network error: ' + err.message + '</div>';
+      }
+      btn.disabled = false;
+      btn.textContent = 'Execute';
+    }
+
+    function escapeHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
 
     // Scroll spy — highlight nav item based on scroll position
     const sections = document.querySelectorAll('.section, .endpoint');

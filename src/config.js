@@ -13,6 +13,13 @@ const config = {
   statuses: ['active', 'suspended', 'banned'],
   mutationTypes: ['deposit', 'pembelian', 'refund'],
   mutationDirections: ['+', '-'],
+  digiflazz: {
+    endpoint: process.env.DIGIFLAZZ_ENDPOINT || 'https://api.digiflazz.com/v1',
+    username: process.env.DIGIFLAZZ_USERNAME || '',
+    apiKey: process.env.DIGIFLAZZ_API_KEY || '',
+    webhookSecret: process.env.DIGIFLAZZ_WEBHOOK_SECRET || '',
+    timeoutMs: Number(process.env.DIGIFLAZZ_TIMEOUT_MS) || 30000,
+  },
 };
 
 if (!config.jwtSecret) {
