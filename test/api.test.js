@@ -18,13 +18,30 @@ let server;
 let baseUrl;
 
 function request(route, options = {}) {
+  const headers = { ...(options.headers || {}) };
+  if (options.body && !headers['content-type']) {
+    headers['content-type'] = 'application/json';
+  }
   return fetch(`${baseUrl}${route}`, {
     ...options,
-    headers: { 'content-type': 'application/json', ...(options.headers || {}) },
-  }).then(async (response) => ({
-    status: response.status,
-    body: await response.json(),
-  }));
+    headers,
+  }).then(async (response) => {
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      return {
+        status: response.status,
+        body: await response.json(),
+        contentType,
+        text: null,
+      };
+    }
+    return {
+      status: response.status,
+      body: null,
+      contentType,
+      text: await response.text(),
+    };
+  });
 }
 
 function auth(token) {
@@ -42,6 +59,18 @@ test.after(async () => {
   await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
   db.close();
   fs.rmSync(tempDir, { recursive: true, force: true });
+});
+
+test('documentation routes serve themed docs and raw OpenAPI spec', async () => {
+  let response = await request('/docs');
+  assert.equal(response.status, 200);
+  assert.ok(response.contentType.includes('text/html'));
+  assert.ok(response.text.includes('Jywa API'));
+  assert.ok(response.text.includes('/api/auth/login'));
+
+  response = await request('/openapi.yaml');
+  assert.equal(response.status, 200);
+  assert.ok(response.text.includes('openapi: 3.1.0'));
 });
 
 test('auth, profile, owner controls, and balance mutations work end-to-end', async () => {

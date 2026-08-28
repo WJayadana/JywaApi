@@ -13,6 +13,15 @@ npm start
 
 API lokal listen di `127.0.0.1:3000`; HTTPS publik disediakan Caddy di `https://jywa.tech`.
 
+## Dokumentasi
+
+Buka dokumentasi manual bertema Jywa di:
+
+- **https://jywa.tech/docs** — docs interaktif, endpoint bisa dibuka/tutup, contoh cURL, schema, copy button, dan light/dark mode.
+- **https://jywa.tech/openapi.yaml** — raw OpenAPI 3.1 spec untuk Swagger Editor/Redoc/Postman.
+
+Dokumentasi ini sengaja dibuat manual agar visual dan penjelasannya bisa disesuaikan dengan kebutuhan produk PPOB, bukan Swagger UI default.
+
 ## Auth
 
 Semua user baru otomatis mendapat role `bronze`. Role yang tersedia:

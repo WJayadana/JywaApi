@@ -1,0 +1,755 @@
+openapi: 3.1.0
+info:
+  title: Jywa API
+  version: 1.0.0
+  description: |
+    Fondasi API untuk platform PPOB Jywa. Saat ini mencakup manajemen user, role,
+    JWT authentication, saldo, dan audit mutasi saldo.
+
+    Otentikasi: Bearer JWT didapat dari `POST /api/auth/register` atau
+    `POST /api/auth/login`.
+  contact:
+    name: Jywa
+    email: admin@jywa.tech
+  license:
+    name: Private
+servers:
+  - url: https://jywa.tech
+    description: Production
+  - url: http://127.0.0.1:3000
+    description: Local development
+tags:
+  - name: System
+    description: Health dan metadata API
+  - name: Auth
+    description: Registrasi dan login
+  - name: Users
+    description: Profil user dan riwayat mutasi
+  - name: Owner
+    description: Endpoint khusus role owner
+paths:
+  /:
+    get:
+      operationId: getRoot
+      tags: [System]
+      summary: API metadata
+      security: []
+      responses:
+        '200':
+          description: Metadata API
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiInfo'
+              example:
+                name: Jywa API
+                version: 1.0.0
+                health: /health
+  /health:
+    get:
+      operationId: getHealth
+      tags: [System]
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: API dan database sehat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: ok
+                service: jywa-api
+                timestamp: '2026-08-28T16:50:50.858Z'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+  /api/auth/register:
+    post:
+      operationId: register
+      tags: [Auth]
+      summary: Registrasi user baru
+      security: []
+      description: |
+        Membuat user baru dengan role default `bronze`.
+        Endpoint ini rate-limited.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            examples:
+              basic:
+                value:
+                  username: user1
+                  email: user1@example.com
+                  phone: '08123456789'
+                  password: password-123
+      responses:
+        '201':
+          description: User berhasil dibuat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/auth/login:
+    post:
+      operationId: login
+      tags: [Auth]
+      summary: Login
+      security: []
+      description: |
+        Login memakai `identifier` berisi username atau email.
+        Endpoint ini rate-limited.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              username:
+                value:
+                  identifier: jayadana
+                  password: password-123
+              email:
+                value:
+                  identifier: user@example.com
+                  password: password-123
+      responses:
+        '200':
+          description: Login berhasil
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /api/users/me:
+    get:
+      operationId: getMe
+      tags: [Users]
+      summary: Profil user login
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Profil user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      operationId: updateMe
+      tags: [Users]
+      summary: Update profil user login
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOwnProfileRequest'
+            examples:
+              update_email:
+                value:
+                  email: user2@example.com
+              update_phone:
+                value:
+                  phone: '08123456780'
+      responses:
+        '200':
+          description: Profil terupdate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/users/me/mutations:
+    get:
+      operationId: getMyMutations
+      tags: [Users]
+      summary: Riwayat mutasi saldo user login
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [deposit, pembelian, refund]
+      responses:
+        '200':
+          description: Daftar mutasi user login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationListResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/users:
+    get:
+      operationId: listUsers
+      tags: [Owner]
+      summary: Daftar semua user
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [owner, bronze, silver, gold, reseller]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, suspended, banned]
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Cari di username, email, atau phone
+      responses:
+        '200':
+          description: Daftar user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserListResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/users/{id}:
+    get:
+      operationId: getUser
+      tags: [Owner]
+      summary: Detail user
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Detail user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      operationId: updateUser
+      tags: [Owner]
+      summary: Update user
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+            examples:
+              upgrade_role:
+                value:
+                  role: reseller
+              suspend:
+                value:
+                  status: suspended
+      responses:
+        '200':
+          description: User terupdate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+    delete:
+      operationId: banUser
+      tags: [Owner]
+      summary: Soft-ban user
+      description: Mengubah status user menjadi `banned`; data dan mutasi tetap tersimpan.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: User berhasil dibanned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserActionResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/users/{id}/balance:
+    post:
+      operationId: changeBalance
+      tags: [Owner]
+      summary: Tambah atau kurangi saldo user
+      description: |
+        Perubahan saldo selalu dicatat sebagai mutasi audit.
+        `amount` adalah integer dalam Rupiah.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BalanceChangeRequest'
+            examples:
+              deposit:
+                value:
+                  type: deposit
+                  direction: +
+                  amount: 50000
+                  note: deposit awal test
+                  ref_id: dep-001
+              refund:
+                value:
+                  type: refund
+                  direction: +
+                  amount: 10000
+                  note: refund pembelian gagal
+                  ref_id: trx-123
+      responses:
+        '201':
+          description: Saldo berubah dan mutasi tercatat
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalanceChangeResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /api/users/{id}/mutations:
+    get:
+      operationId: getUserMutations
+      tags: [Owner]
+      summary: Riwayat mutasi user lain
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [deposit, pembelian, refund]
+      responses:
+        '200':
+          description: Daftar mutasi user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MutationListResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  responses:
+    ValidationError:
+      description: Request tidak valid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: ValidationError
+            message: 'username must be 3-32 chars'
+    Unauthorized:
+      description: Token hilang, invalid, atau expired
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Unauthorized
+            message: Missing bearer token
+    Forbidden:
+      description: User tidak punya akses atau akun tidak aktif
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Forbidden
+            message: Insufficient role
+    NotFound:
+      description: Resource tidak ditemukan
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: NotFound
+            message: user not found
+    Conflict:
+      description: Konflik data unik atau saldo tidak mencukupi
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: Conflict
+            message: username or email is already registered
+    TooManyRequests:
+      description: Rate limit tercapai
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: TooManyRequests
+            message: too many authentication attempts; try again later
+    ServiceUnavailable:
+      description: Service atau database sedang tidak sehat
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/HealthErrorResponse'
+          example:
+            status: error
+            service: jywa-api
+  schemas:
+    ApiInfo:
+      type: object
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+        health:
+          type: string
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        service:
+          type: string
+          example: jywa-api
+        timestamp:
+          type: string
+          format: date-time
+    HealthErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: error
+        service:
+          type: string
+          example: jywa-api
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        fields:
+          type: object
+          additionalProperties:
+            type: string
+      required: [error, message]
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [owner, bronze, silver, gold, reseller]
+        balance:
+          type: integer
+          description: Saldo dalam Rupiah
+        status:
+          type: string
+          enum: [active, suspended, banned]
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    RegisterRequest:
+      type: object
+      required: [username, email, phone, password]
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        password:
+          type: string
+          minLength: 8
+    LoginRequest:
+      type: object
+      required: [password]
+      properties:
+        identifier:
+          type: string
+          description: username atau email
+        username:
+          type: string
+          description: fallback kompatibilitas
+        password:
+          type: string
+    UpdateOwnProfileRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+    UpdateUserRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [owner, bronze, silver, gold, reseller]
+        status:
+          type: string
+          enum: [active, suspended, banned]
+    BalanceChangeRequest:
+      type: object
+      required: [type, direction, amount]
+      properties:
+        type:
+          type: string
+          enum: [deposit, pembelian, refund]
+        direction:
+          type: string
+          enum: ['+', '-']
+        amount:
+          type: integer
+          minimum: 1
+          description: nominal dalam Rupiah
+        note:
+          type: string
+        ref_id:
+          type: string
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+    UserProfileResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+    UserActionResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+    BalanceChangeResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        mutation:
+          $ref: '#/components/schemas/Mutation'
+    Mutation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [deposit, pembelian, refund]
+        direction:
+          type: string
+          enum: ['+', '-']
+        amount:
+          type: integer
+        balance_before:
+          type: integer
+        balance_after:
+          type: integer
+        note:
+          type: [string, 'null']
+        ref_id:
+          type: [string, 'null']
+        created_at:
+          type: string
+          format: date-time
+    MutationListResponse:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+        mutations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Mutation'
+    UserListResponse:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'

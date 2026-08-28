@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
+const fs = require('fs');
+const path = require('path');
 
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
@@ -30,7 +32,20 @@ app.get('/health', (_req, res) => {
 });
 
 app.get('/', (_req, res) => {
-  res.json({ name: 'Jywa API', version: '1.0.0', health: '/health' });
+  res.json({ name: 'Jywa API', version: '1.0.0', health: '/health', docs: '/docs' });
+});
+
+// Serve OpenAPI spec and custom docs UI
+app.get('/openapi.yaml', (_req, res) => {
+  const specPath = path.join(__dirname, '..', 'openapi.yaml');
+  res.setHeader('content-type', 'application/yaml; charset=utf-8');
+  res.send(fs.readFileSync(specPath, 'utf-8'));
+});
+
+app.get('/docs', (_req, res) => {
+  const docsPath = path.join(__dirname, '..', 'public', 'docs.html');
+  res.setHeader('content-type', 'text/html; charset=utf-8');
+  res.send(fs.readFileSync(docsPath, 'utf-8'));
 });
 
 app.use('/api/auth', authLimiter, authRoutes);

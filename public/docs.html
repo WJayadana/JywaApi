@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jywa API — Documentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ===== Design Tokens (Mintlify-inspired) ===== */
+    :root {
+      --color-bg: #ffffff;
+      --color-surface: #fafafa;
+      --color-surface-alt: #f5f5f5;
+      --color-text: #0d0d0d;
+      --color-text-secondary: #333333;
+      --color-text-muted: #666666;
+      --color-text-faint: #888888;
+      --color-border: rgba(0,0,0,0.06);
+      --color-border-strong: rgba(0,0,0,0.10);
+      --color-brand: #18E299;
+      --color-brand-deep: #0fa76e;
+      --color-brand-light: #d4fae8;
+      --color-brand-tint: rgba(24,226,153,0.08);
+      --color-amber: #c37d0d;
+      --color-amber-bg: rgba(195,125,13,0.08);
+      --color-red: #d45656;
+      --color-red-bg: rgba(212,86,86,0.08);
+      --color-blue: #3772cf;
+      --color-blue-bg: rgba(55,114,207,0.08);
+      --radius-sm: 6px;
+      --radius: 10px;
+      --radius-lg: 16px;
+      --radius-xl: 24px;
+      --shadow-sm: rgba(0,0,0,0.04) 0px 1px 3px;
+      --shadow: rgba(0,0,0,0.06) 0px 2px 8px;
+      --shadow-lg: rgba(0,0,0,0.08) 0px 8px 28px;
+      --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+      --max-width: 1280px;
+      --sidebar-width: 280px;
+    }
+
+    [data-theme="dark"] {
+      --color-bg: #0d0d0d;
+      --color-surface: #141414;
+      --color-surface-alt: #1a1a1a;
+      --color-text: #ededed;
+      --color-text-secondary: #c0c0c0;
+      --color-text-muted: #a0a0a0;
+      --color-text-faint: #707070;
+      --color-border: rgba(255,255,255,0.08);
+      --color-border-strong: rgba(255,255,255,0.12);
+      --color-brand-tint: rgba(24,226,153,0.06);
+      --shadow-sm: rgba(0,0,0,0.3) 0px 1px 3px;
+      --shadow: rgba(0,0,0,0.4) 0px 2px 8px;
+      --shadow-lg: rgba(0,0,0,0.5) 0px 8px 28px;
+    }
+
+    /* ===== Reset ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; scroll-padding-top: 80px; }
+    body {
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--color-text);
+      background: var(--color-bg);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* ===== Layout ===== */
+    .app { display: flex; min-height: 100vh; }
+
+    /* ===== Sidebar ===== */
+    .sidebar {
+      width: var(--sidebar-width);
+      flex-shrink: 0;
+      border-right: 1px solid var(--color-border);
+      background: var(--color-surface);
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      overflow-y: auto;
+      padding: 24px 16px;
+      z-index: 100;
+      transition: transform 0.25s ease;
+    }
+    .sidebar-brand {
+      display: flex; align-items: center; gap: 10px;
+      padding: 0 8px 20px;
+      border-bottom: 1px solid var(--color-border);
+      margin-bottom: 16px;
+    }
+    .sidebar-brand .logo {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: linear-gradient(135deg, var(--color-brand), var(--color-brand-deep));
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 16px; color: #0d0d0d;
+      flex-shrink: 0;
+    }
+    .sidebar-brand .name { font-weight: 600; font-size: 16px; letter-spacing: -0.3px; }
+    .sidebar-brand .ver { font-size: 11px; color: var(--color-text-faint); font-family: var(--font-mono); }
+
+    .nav-section { margin-bottom: 20px; }
+    .nav-section-title {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.6px; color: var(--color-text-faint);
+      padding: 0 8px 8px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 8px; border-radius: var(--radius-sm);
+      font-size: 14px; color: var(--color-text-secondary);
+      text-decoration: none; cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-item:hover { background: var(--color-surface-alt); color: var(--color-text); }
+    .nav-item.active { background: var(--color-brand-tint); color: var(--color-brand-deep); font-weight: 500; }
+    .nav-item .method-badge {
+      font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+      padding: 1px 5px; border-radius: 4px; flex-shrink: 0;
+      text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .method-get { background: rgba(55,114,207,0.12); color: var(--color-blue); }
+    .method-post { background: rgba(24,226,153,0.12); color: var(--color-brand-deep); }
+    .method-put { background: rgba(195,125,13,0.12); color: var(--color-amber); }
+    .method-delete { background: rgba(212,86,86,0.12); color: var(--color-red); }
+
+    /* ===== Main Content ===== */
+    .main {
+      flex: 1; margin-left: var(--sidebar-width);
+      max-width: calc(var(--max-width) - var(--sidebar-width));
+      padding: 0 48px 120px;
+    }
+
+    /* ===== Topbar ===== */
+    .topbar {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--color-border);
+      padding: 12px 48px;
+      margin: 0 -48px 32px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    [data-theme="dark"] .topbar { background: rgba(13,13,13,0.85); }
+    .topbar-left { display: flex; align-items: center; gap: 16px; }
+    .topbar-title { font-size: 14px; font-weight: 500; color: var(--color-text-muted); }
+    .topbar-right { display: flex; align-items: center; gap: 12px; }
+    .topbar-btn {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 9999px;
+      font-size: 13px; font-weight: 500; cursor: pointer;
+      border: 1px solid var(--color-border-strong);
+      background: transparent; color: var(--color-text-secondary);
+      transition: all 0.15s;
+    }
+    .topbar-btn:hover { background: var(--color-surface-alt); color: var(--color-text); }
+    .topbar-btn svg { width: 15px; height: 15px; }
+
+    /* ===== Hero ===== */
+    .hero {
+      padding: 48px 0 40px;
+      border-bottom: 1px solid var(--color-border);
+      margin-bottom: 40px;
+    }
+    .hero h1 {
+      font-size: 42px; font-weight: 600; letter-spacing: -1.0px;
+      line-height: 1.15; margin-bottom: 16px;
+    }
+    .hero p { font-size: 18px; color: var(--color-text-muted); max-width: 640px; line-height: 1.6; }
+    .hero-badges { display: flex; gap: 10px; margin-top: 20px; flex-wrap: wrap; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 500;
+      background: var(--color-brand-light); color: var(--color-brand-deep);
+    }
+    [data-theme="dark"] .hero-badge { background: rgba(24,226,153,0.1); }
+    .hero-badge.mono { background: var(--color-surface-alt); color: var(--color-text-muted); font-family: var(--font-mono); }
+
+    /* ===== Sections ===== */
+    .section { margin-bottom: 56px; scroll-margin-top: 80px; }
+    .section-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .section-header h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.4px; }
+    .section-tag {
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 2px 8px; border-radius: 9999px;
+      background: var(--color-surface-alt); color: var(--color-text-muted);
+    }
+    .section-desc { font-size: 15px; color: var(--color-text-muted); margin-bottom: 20px; }
+
+    /* ===== Endpoint Card ===== */
+    .endpoint {
+      background: var(--color-bg);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+      margin-bottom: 16px;
+      overflow: hidden;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .endpoint:hover { border-color: var(--color-border-strong); box-shadow: var(--shadow-sm); }
+    .endpoint-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 20px; cursor: pointer;
+      user-select: none;
+    }
+    .endpoint-method {
+      font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+      padding: 3px 8px; border-radius: 6px;
+      text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0;
+      min-width: 56px; text-align: center;
+    }
+    .endpoint-path {
+      font-family: var(--font-mono); font-size: 14px; font-weight: 500;
+      color: var(--color-text); flex: 1;
+    }
+    .endpoint-summary { font-size: 14px; color: var(--color-text-muted); flex-shrink: 0; }
+    .endpoint-chevron { width: 18px; height: 18px; color: var(--color-text-faint); transition: transform 0.2s; flex-shrink: 0; }
+    .endpoint.open .endpoint-chevron { transform: rotate(90deg); }
+
+    .endpoint-body {
+      display: none; padding: 0 20px 20px;
+      border-top: 1px solid var(--color-border);
+    }
+    .endpoint.open .endpoint-body { display: block; }
+
+    .endpoint-desc { font-size: 14px; color: var(--color-text-muted); padding: 16px 0; }
+
+    /* ===== Params Table ===== */
+    .params-title { font-size: 13px; font-weight: 600; color: var(--color-text-secondary); margin: 16px 0 8px; }
+    .params-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .params-table th {
+      text-align: left; padding: 8px 12px; font-weight: 500;
+      color: var(--color-text-muted); border-bottom: 1px solid var(--color-border);
+    }
+    .params-table td {
+      padding: 8px 12px; border-bottom: 1px solid var(--color-border);
+      color: var(--color-text-secondary);
+    }
+    .params-table td:first-child { font-family: var(--font-mono); font-weight: 500; color: var(--color-text); white-space: nowrap; }
+    .param-required { color: var(--color-red); font-size: 10px; font-weight: 600; margin-left: 4px; }
+    .param-type { font-family: var(--font-mono); font-size: 11px; color: var(--color-text-faint); }
+
+    /* ===== Code Block ===== */
+    .code-block {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius);
+      margin: 12px 0; overflow: hidden;
+    }
+    .code-block-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 14px; border-bottom: 1px solid var(--color-border);
+      background: var(--color-surface-alt);
+    }
+    .code-block-label { font-family: var(--font-mono); font-size: 11px; font-weight: 500; color: var(--color-text-faint); text-transform: uppercase; letter-spacing: 0.4px; }
+    .copy-btn {
+      font-size: 11px; font-weight: 500; cursor: pointer;
+      color: var(--color-text-muted); background: none; border: none;
+      padding: 2px 8px; border-radius: 4px; transition: all 0.15s;
+    }
+    .copy-btn:hover { background: var(--color-bg); color: var(--color-text); }
+    .copy-btn.copied { color: var(--color-brand-deep); }
+    .code-block pre {
+      padding: 14px; overflow-x: auto;
+      font-family: var(--font-mono); font-size: 13px; line-height: 1.6;
+      color: var(--color-text);
+    }
+    .code-block pre code { font-family: inherit; }
+
+    /* ===== Response Schema ===== */
+    .response-block { margin-top: 16px; }
+    .response-status {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+      padding: 3px 10px; border-radius: 6px; margin-bottom: 8px;
+    }
+    .status-2xx { background: rgba(24,226,153,0.1); color: var(--color-brand-deep); }
+    .status-4xx { background: rgba(212,86,86,0.1); color: var(--color-red); }
+    .status-5xx { background: rgba(195,125,13,0.1); color: var(--color-amber); }
+
+    /* ===== Auth Banner ===== */
+    .auth-banner {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 16px 20px; border-radius: var(--radius);
+      background: var(--color-brand-tint); border: 1px solid rgba(24,226,153,0.2);
+      margin-bottom: 32px;
+    }
+    .auth-banner-icon { width: 20px; height: 20px; color: var(--color-brand-deep); flex-shrink: 0; margin-top: 1px; }
+    .auth-banner-text { font-size: 14px; color: var(--color-text-secondary); }
+    .auth-banner-text code {
+      font-family: var(--font-mono); font-size: 12px;
+      background: var(--color-surface-alt); padding: 2px 6px; border-radius: 4px;
+    }
+
+    /* ===== Schema Display ===== */
+    .schema-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .schema-table th { text-align: left; padding: 8px 12px; font-weight: 500; color: var(--color-text-muted); border-bottom: 1px solid var(--color-border); }
+    .schema-table td { padding: 8px 12px; border-bottom: 1px solid var(--color-border); }
+    .schema-table td:first-child { font-family: var(--font-mono); font-weight: 500; color: var(--color-text); }
+    .schema-type { font-family: var(--font-mono); font-size: 11px; color: var(--color-blue); }
+    .schema-enum { font-family: var(--font-mono); font-size: 11px; color: var(--color-amber); }
+
+    /* ===== Mobile ===== */
+    .sidebar-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.4); z-index: 99;
+    }
+    .menu-toggle {
+      display: none; position: fixed; bottom: 24px; right: 24px;
+      width: 48px; height: 48px; border-radius: 50%;
+      background: var(--color-text); color: var(--color-bg);
+      border: none; cursor: pointer; z-index: 101;
+      box-shadow: var(--shadow-lg);
+      align-items: center; justify-content: center;
+    }
+    @media (max-width: 900px) {
+      .sidebar { transform: translateX(-100%); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-overlay.show { display: block; }
+      .main { margin-left: 0; padding: 0 20px 100px; }
+      .topbar { padding: 12px 20px; margin: 0 -20px 24px; }
+      .hero h1 { font-size: 32px; }
+      .hero p { font-size: 16px; }
+      .endpoint-summary { display: none; }
+      .menu-toggle { display: flex; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="logo">J</div>
+        <div>
+          <div class="name">Jywa API</div>
+          <div class="ver">v1.0.0</div>
+        </div>
+      </div>
+      <div class="nav-section" data-section="system">
+        <div class="nav-section-title">System</div>
+        <a class="nav-item" data-target="root"><span class="method-badge method-get">GET</span> /</a>
+        <a class="nav-item" data-target="health"><span class="method-badge method-get">GET</span> /health</a>
+      </div>
+      <div class="nav-section" data-section="auth">
+        <div class="nav-section-title">Auth</div>
+        <a class="nav-item" data-target="register"><span class="method-badge method-post">POST</span> /api/auth/register</a>
+        <a class="nav-item" data-target="login"><span class="method-badge method-post">POST</span> /api/auth/login</a>
+      </div>
+      <div class="nav-section" data-section="users">
+        <div class="nav-section-title">Users</div>
+        <a class="nav-item" data-target="get-me"><span class="method-badge method-get">GET</span> /api/users/me</a>
+        <a class="nav-item" data-target="update-me"><span class="method-badge method-put">PUT</span> /api/users/me</a>
+        <a class="nav-item" data-target="my-mutations"><span class="method-badge method-get">GET</span> /api/users/me/mutations</a>
+      </div>
+      <div class="nav-section" data-section="owner">
+        <div class="nav-section-title">Owner Only</div>
+        <a class="nav-item" data-target="list-users"><span class="method-badge method-get">GET</span> /api/users</a>
+        <a class="nav-item" data-target="get-user"><span class="method-badge method-get">GET</span> /api/users/:id</a>
+        <a class="nav-item" data-target="update-user"><span class="method-badge method-put">PUT</span> /api/users/:id</a>
+        <a class="nav-item" data-target="ban-user"><span class="method-badge method-delete">DEL</span> /api/users/:id</a>
+        <a class="nav-item" data-target="balance"><span class="method-badge method-post">POST</span> /api/users/:id/balance</a>
+        <a class="nav-item" data-target="user-mutations"><span class="method-badge method-get">GET</span> /api/users/:id/mutations</a>
+      </div>
+      <div class="nav-section" data-section="schemas">
+        <div class="nav-section-title">Schemas</div>
+        <a class="nav-item" data-target="schema-user">User</a>
+        <a class="nav-item" data-target="schema-mutation">Mutation</a>
+        <a class="nav-item" data-target="schema-balance">BalanceChange</a>
+      </div>
+    </nav>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <!-- Main -->
+    <main class="main">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="topbar-title">Jywa API Documentation</div>
+        </div>
+        <div class="topbar-right">
+          <button class="topbar-btn" id="theme-toggle" aria-label="Toggle theme">
+            <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <span id="theme-label">Dark</span>
+          </button>
+          <a class="topbar-btn" href="/openapi.yaml" download>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            OpenAPI
+          </a>
+        </div>
+      </div>
+
+      <!-- Hero -->
+      <div class="hero" id="overview">
+        <h1>Jywa API</h1>
+        <p>Fondasi API untuk platform PPOB Jywa — manajemen user, role, JWT authentication, saldo, dan audit mutasi.</p>
+        <div class="hero-badges">
+          <span class="hero-badge">OpenAPI 3.1.0</span>
+          <span class="hero-badge mono">JWT Auth</span>
+          <span class="hero-badge mono">Express 5</span>
+          <span class="hero-badge mono">SQLite</span>
+        </div>
+      </div>
+
+      <!-- Auth Info -->
+      <div class="auth-banner">
+        <svg class="auth-banner-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <div class="auth-banner-text">
+          Semua endpoint (kecuali <code>/</code>, <code>/health</code>, <code>/api/auth/register</code>, dan <code>/api/auth/login</code>) memerlukan <strong>Bearer JWT</strong> di header <code>Authorization: Bearer &lt;token&gt;</code>. Token didapat dari register atau login.
+        </div>
+      </div>
+
+      <!-- ===== SYSTEM ===== -->
+      <div class="section" id="system">
+        <div class="section-header"><h2>System</h2><span class="section-tag">Publik</span></div>
+        <p class="section-desc">Endpoint metadata dan health check API.</p>
+
+        <div class="endpoint" id="root">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-get">GET</span>
+            <span class="endpoint-path">/</span>
+            <span class="endpoint-summary">API metadata</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Mengembalikan nama, versi, dan path health check.</p>
+            <div class="response-block">
+              <span class="response-status status-2xx">200 OK</span>
+              <div class="code-block">
+                <div class="code-block-header"><span class="code-block-label">Response</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "name": "Jywa API",
+  "version": "1.0.0",
+  "health": "/health"
+}</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="endpoint" id="health">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-get">GET</span>
+            <span class="endpoint-path">/health</span>
+            <span class="endpoint-summary">Health check</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Memeriksa kesehatan API dan database.</p>
+            <div class="response-block">
+              <span class="response-status status-2xx">200 OK</span>
+              <div class="code-block">
+                <div class="code-block-header"><span class="code-block-label">Response</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "status": "ok",
+  "service": "jywa-api",
+  "timestamp": "2026-08-28T16:50:50.858Z"
+}</code></pre>
+              </div>
+            </div>
+            <div class="response-block">
+              <span class="response-status status-5xx">503 Service Unavailable</span>
+              <div class="code-block">
+                <div class="code-block-header"><span class="code-block-label">Response</span></div>
+                <pre><code>{ "status": "error", "service": "jywa-api" }</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== AUTH ===== -->
+      <div class="section" id="auth">
+        <div class="section-header"><h2>Auth</h2><span class="section-tag">Publik · Rate-limited</span></div>
+        <p class="section-desc">Registrasi dan login. Rate limit: 30 request per 15 menit per IP.</p>
+
+        <div class="endpoint" id="register">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-post">POST</span>
+            <span class="endpoint-path">/api/auth/register</span>
+            <span class="endpoint-summary">Registrasi user baru</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Membuat user baru dengan role default <code>bronze</code>.</p>
+            <div class="params-title">Request Body</div>
+            <table class="params-table">
+              <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Deskripsi</th></tr></thead>
+              <tbody>
+                <tr><td>username<span class="param-required">*</span></td><td><span class="param-type">string</span></td><td>Ya</td><td>3-32 char, alfanumerik + <code>.</code> <code>_</code> <code>-</code></td></tr>
+                <tr><td>email<span class="param-required">*</span></td><td><span class="param-type">string (email)</span></td><td>Ya</td><td>Email unik</td></tr>
+                <tr><td>phone<span class="param-required">*</span></td><td><span class="param-type">string</span></td><td>Ya</td><td>Nomor HP, 7-20 char</td></tr>
+                <tr><td>password<span class="param-required">*</span></td><td><span class="param-type">string</span></td><td>Ya</td><td>8-128 char</td></tr>
+              </tbody>
+            </table>
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-label">Contoh Request</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre><code>curl -X POST https://jywa.tech/api/auth/register \
+  -H "content-type: application/json" \
+  -d '{
+    "username": "user1",
+    "email": "user1@example.com",
+    "phone": "08123456789",
+    "password": "password-123"
+  }'</code></pre>
+            </div>
+            <div class="response-block">
+              <span class="response-status status-2xx">201 Created</span>
+              <div class="code-block">
+                <div class="code-block-header"><span class="code-block-label">Response</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "user": {
+    "id": "738aaf0f-a288-49bf-b576-067c8c4118a4",
+    "username": "user1",
+    "email": "user1@example.com",
+    "phone": "08123456789",
+    "role": "bronze",
+    "balance": 0,
+    "status": "active",
+    "created_at": "2026-08-28T17:05:18",
+    "updated_at": "2026-08-28T17:05:18"
+  },
+  "token": "eyJhbGci..."
+}</code></pre>
+              </div>
+            </div>
+            <div class="response-block">
+              <span class="response-status status-4xx">409 Conflict</span>
+              <div class="code-block">
+                <div class="code-block-header"><span class="code-block-label">Response</span></div>
+                <pre><code>{ "error": "Conflict", "message": "username or email is already registered" }</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="endpoint" id="login">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-post">POST</span>
+            <span class="endpoint-path">/api/auth/login</span>
+            <span class="endpoint-summary">Login</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Login memakai <code>identifier</code> berisi username atau email.</p>
+            <div class="params-title">Request Body</div>
+            <table class="params-table">
+              <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Deskripsi</th></tr></thead>
+              <tbody>
+                <tr><td>identifier<span class="param-required">*</span></td><td><span class="param-type">string</span></td><td>Ya</td><td>Username atau email</td></tr>
+                <tr><td>password<span class="param-required">*</span></td><td><span class="param-type">string</span></td><td>Ya</td><td>Password user</td></tr>
+              </tbody>
+            </table>
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-label">Contoh Request</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre><code>curl -X POST https://jywa.tech/api/auth/login \
+  -H "content-type: application/json" \
+  -d '{
+    "identifier": "user1",
+    "password": "password-123"
+  }'</code></pre>
+            </div>
+            <div class="response-block">
+              <span class="response-status status-2xx">200 OK</span>
+              <div class="code-block">
+                <div class="code-block-header"><span class="code-block-label">Response</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "user": {
+    "id": "738aaf0f-...",
+    "username": "user1",
+    "email": "user1@example.com",
+    "phone": "08123456789",
+    "role": "bronze",
+    "balance": 50000,
+    "status": "active",
+    "created_at": "2026-08-28T17:05:18",
+    "updated_at": "2026-08-28T17:05:18"
+  },
+  "token": "eyJhbGci..."
+}</code></pre>
+              </div>
+            </div>
+            <div class="response-block">
+              <span class="response-status status-4xx">401 Unauthorized</span>
+              <div class="code-block">
+                <div class="code-block-header"><span class="code-block-label">Response</span></div>
+                <pre><code>{ "error": "Unauthorized", "message": "invalid credentials" }</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== USERS ===== -->
+      <div class="section" id="users-section">
+        <div class="section-header"><h2>Users</h2><span class="section-tag">Auth Required</span></div>
+        <p class="section-desc">Profil user dan riwayat mutasi saldo sendiri.</p>
+
+        <div class="endpoint" id="get-me">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-get">GET</span>
+            <span class="endpoint-path">/api/users/me</span>
+            <span class="endpoint-summary">Profil user login</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Mengembalikan profil dan saldo user yang sedang login.</p>
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-label">Contoh Request</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre><code>curl https://jywa.tech/api/users/me \
+  -H "Authorization: Bearer &lt;token&gt;"</code></pre>
+            </div>
+            <div class="response-block">
+              <span class="response-status status-2xx">200 OK</span>
+              <div class="code-block">
+                <div class="code-block-header"><span class="code-block-label">Response</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "user": {
+    "id": "738aaf0f-...",
+    "username": "user1",
+    "email": "user1@example.com",
+    "phone": "08123456789",
+    "role": "bronze",
+    "balance": 50000,
+    "status": "active",
+    "created_at": "...",
+    "updated_at": "..."
+  }
+}</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="endpoint" id="update-me">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-put">PUT</span>
+            <span class="endpoint-path">/api/users/me</span>
+            <span class="endpoint-summary">Update profil sendiri</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Update username, email, atau phone. Minimal satu field harus diisi.</p>
+            <div class="params-title">Request Body (opsional, minimal 1)</div>
+            <table class="params-table">
+              <thead><tr><th>Field</th><th>Type</th><th>Deskripsi</th></tr></thead>
+              <tbody>
+                <tr><td>username</td><td><span class="param-type">string</span></td><td>3-32 char, unik</td></tr>
+                <tr><td>email</td><td><span class="param-type">string (email)</span></td><td>Email unik</td></tr>
+                <tr><td>phone</td><td><span class="param-type">string</span></td><td>Nomor HP</td></tr>
+              </tbody>
+            </table>
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-label">Contoh Request</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre><code>curl -X PUT https://jywa.tech/api/users/me \
+  -H "Authorization: Bearer &lt;token&gt;" \
+  -H "content-type: application/json" \
+  -d '{ "phone": "08123456780" }'</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="endpoint" id="my-mutations">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-get">GET</span>
+            <span class="endpoint-path">/api/users/me/mutations</span>
+            <span class="endpoint-summary">Riwayat mutasi saldo</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Riwayat mutasi saldo user login dengan pagination.</p>
+            <div class="params-title">Query Parameters</div>
+            <table class="params-table">
+              <thead><tr><th>Param</th><th>Type</th><th>Default</th><th>Deskripsi</th></tr></thead>
+              <tbody>
+                <tr><td>page</td><td><span class="param-type">integer</span></td><td>1</td><td>Nomor halaman</td></tr>
+                <tr><td>limit</td><td><span class="param-type">integer</span></td><td>20</td><td>Item per halaman (max 100)</td></tr>
+                <tr><td>type</td><td><span class="param-type">enum</span></td><td>—</td><td><code>deposit</code> · <code>pembelian</code> · <code>refund</code></td></tr>
+              </tbody>
+            </table>
+            <div class="response-block">
+              <span class="response-status status-2xx">200 OK</span>
+              <div class="code-block">
+                <div class="code-block-header"><span class="code-block-label">Response</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "page": 1,
+  "limit": 20,
+  "total": 2,
+  "pages": 1,
+  "mutations": [
+    {
+      "id": "...",
+      "user_id": "...",
+      "type": "pembelian",
+      "direction": "-",
+      "amount": 25000,
+      "balance_before": 100000,
+      "balance_after": 75000,
+      "note": null,
+      "ref_id": "trx-1",
+      "created_at": "..."
+    }
+  ]
+}</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== OWNER ===== -->
+      <div class="section" id="owner-section">
+        <div class="section-header"><h2>Owner Only</h2><span class="section-tag">Role: owner</span></div>
+        <p class="section-desc">Endpoint admin untuk manajemen user dan saldo. Hanya role <code>owner</code>.</p>
+
+        <div class="endpoint" id="list-users">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-get">GET</span>
+            <span class="endpoint-path">/api/users</span>
+            <span class="endpoint-summary">Daftar semua user</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <div class="params-title">Query Parameters</div>
+            <table class="params-table">
+              <thead><tr><th>Param</th><th>Type</th><th>Default</th><th>Deskripsi</th></tr></thead>
+              <tbody>
+                <tr><td>page</td><td><span class="param-type">integer</span></td><td>1</td><td>Nomor halaman</td></tr>
+                <tr><td>limit</td><td><span class="param-type">integer</span></td><td>20</td><td>Item per halaman (max 100)</td></tr>
+                <tr><td>role</td><td><span class="param-type">enum</span></td><td>—</td><td><code>owner</code> · <code>bronze</code> · <code>silver</code> · <code>gold</code> · <code>reseller</code></td></tr>
+                <tr><td>status</td><td><span class="param-type">enum</span></td><td>—</td><td><code>active</code> · <code>suspended</code> · <code>banned</code></td></tr>
+                <tr><td>search</td><td><span class="param-type">string</span></td><td>—</td><td>Cari di username, email, atau phone</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="endpoint" id="get-user">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-get">GET</span>
+            <span class="endpoint-path">/api/users/:id</span>
+            <span class="endpoint-summary">Detail user</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <div class="params-title">Path Parameters</div>
+            <table class="params-table">
+              <thead><tr><th>Param</th><th>Type</th><th>Deskripsi</th></tr></thead>
+              <tbody><tr><td>id<span class="param-required">*</span></td><td><span class="param-type">uuid</span></td><td>ID user</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="endpoint" id="update-user">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-put">PUT</span>
+            <span class="endpoint-path">/api/users/:id</span>
+            <span class="endpoint-summary">Update user</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Update profil, role, atau status user. Owner tidak bisa demote atau ban dirinya sendiri.</p>
+            <div class="params-title">Request Body (opsional, minimal 1)</div>
+            <table class="params-table">
+              <thead><tr><th>Field</th><th>Type</th><th>Deskripsi</th></tr></thead>
+              <tbody>
+                <tr><td>username</td><td><span class="param-type">string</span></td><td>Username baru</td></tr>
+                <tr><td>email</td><td><span class="param-type">string</span></td><td>Email baru</td></tr>
+                <tr><td>phone</td><td><span class="param-type">string</span></td><td>Phone baru</td></tr>
+                <tr><td>role</td><td><span class="param-type">enum</span></td><td><code>owner</code> · <code>bronze</code> · <code>silver</code> · <code>gold</code> · <code>reseller</code></td></tr>
+                <tr><td>status</td><td><span class="param-type">enum</span></td><td><code>active</code> · <code>suspended</code> · <code>banned</code></td></tr>
+              </tbody>
+            </table>
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-label">Contoh: Upgrade ke reseller</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre><code>curl -X PUT https://jywa.tech/api/users/&lt;id&gt; \
+  -H "Authorization: Bearer &lt;token&gt;" \
+  -H "content-type: application/json" \
+  -d '{ "role": "reseller" }'</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="endpoint" id="ban-user">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-delete">DEL</span>
+            <span class="endpoint-path">/api/users/:id</span>
+            <span class="endpoint-summary">Soft-ban user</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Mengubah status user menjadi <code>banned</code>. Data dan mutasi tetap tersimpan. Owner tidak bisa ban dirinya sendiri.</p>
+            <div class="response-block">
+              <span class="response-status status-2xx">200 OK</span>
+              <div class="code-block">
+                <div class="code-block-header"><span class="code-block-label">Response</span></div>
+                <pre><code>{ "message": "user banned", "user": { ... } }</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="endpoint" id="balance">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-post">POST</span>
+            <span class="endpoint-path">/api/users/:id/balance</span>
+            <span class="endpoint-summary">Ubah saldo user</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Perubahan saldo selalu dicatat sebagai mutasi audit. <code>amount</code> adalah integer dalam Rupiah.</p>
+            <div class="params-title">Request Body</div>
+            <table class="params-table">
+              <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Deskripsi</th></tr></thead>
+              <tbody>
+                <tr><td>type<span class="param-required">*</span></td><td><span class="param-type">enum</span></td><td>Ya</td><td><code>deposit</code> · <code>pembelian</code> · <code>refund</code></td></tr>
+                <tr><td>direction<span class="param-required">*</span></td><td><span class="param-type">enum</span></td><td>Ya</td><td><code>+</code> (credit) · <code>-</code> (debit)</td></tr>
+                <tr><td>amount<span class="param-required">*</span></td><td><span class="param-type">integer</span></td><td>Ya</td><td>Nominal dalam Rupiah (min 1)</td></tr>
+                <tr><td>note</td><td><span class="param-type">string</span></td><td>Tidak</td><td>Keterangan (max 500 char)</td></tr>
+                <tr><td>ref_id</td><td><span class="param-type">string</span></td><td>Tidak</td><td>ID transaksi terkait (max 100 char)</td></tr>
+              </tbody>
+            </table>
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-label">Contoh: Deposit 50.000</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre><code>curl -X POST https://jywa.tech/api/users/&lt;id&gt;/balance \
+  -H "Authorization: Bearer &lt;token&gt;" \
+  -H "content-type: application/json" \
+  -d '{
+    "type": "deposit",
+    "direction": "+",
+    "amount": 50000,
+    "note": "deposit awal",
+    "ref_id": "dep-001"
+  }'</code></pre>
+            </div>
+            <div class="response-block">
+              <span class="response-status status-2xx">201 Created</span>
+              <div class="code-block">
+                <div class="code-block-header"><span class="code-block-label">Response</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{
+  "user": { ... "balance": 50000 },
+  "mutation": {
+    "balance_before": 0,
+    "balance_after": 50000
+  }
+}</code></pre>
+              </div>
+            </div>
+            <div class="response-block">
+              <span class="response-status status-4xx">409 Conflict</span>
+              <div class="code-block">
+                <div class="code-block-header"><span class="code-block-label">Saldo tidak mencukupi</span></div>
+                <pre><code>{ "error": "Conflict", "message": "insufficient balance" }</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="endpoint" id="user-mutations">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-get">GET</span>
+            <span class="endpoint-path">/api/users/:id/mutations</span>
+            <span class="endpoint-summary">Riwayat mutasi user lain</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Riwayat mutasi user lain. Parameter sama seperti <code>/api/users/me/mutations</code>.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== SCHEMAS ===== -->
+      <div class="section" id="schemas-section">
+        <div class="section-header"><h2>Schemas</h2></div>
+        <p class="section-desc">Struktur data yang digunakan di request dan response.</p>
+
+        <div class="endpoint" id="schema-user">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-path">User</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <table class="schema-table">
+              <thead><tr><th>Field</th><th>Type</th><th>Deskripsi</th></tr></thead>
+              <tbody>
+                <tr><td>id</td><td><span class="schema-type">uuid</span></td><td>ID unik user</td></tr>
+                <tr><td>username</td><td><span class="schema-type">string</span></td><td>Username unik</td></tr>
+                <tr><td>email</td><td><span class="schema-type">string (email)</span></td><td>Email unik</td></tr>
+                <tr><td>phone</td><td><span class="schema-type">string</span></td><td>Nomor HP</td></tr>
+                <tr><td>role</td><td><span class="schema-type">enum</span></td><td><span class="schema-enum">owner · bronze · silver · gold · reseller</span></td></tr>
+                <tr><td>balance</td><td><span class="schema-type">integer</span></td><td>Saldo dalam Rupiah</td></tr>
+                <tr><td>status</td><td><span class="schema-type">enum</span></td><td><span class="schema-enum">active · suspended · banned</span></td></tr>
+                <tr><td>created_at</td><td><span class="schema-type">datetime</span></td><td>Timestamp pembuatan</td></tr>
+                <tr><td>updated_at</td><td><span class="schema-type">datetime</span></td><td>Timestamp update terakhir</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="endpoint" id="schema-mutation">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-path">Mutation</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <table class="schema-table">
+              <thead><tr><th>Field</th><th>Type</th><th>Deskripsi</th></tr></thead>
+              <tbody>
+                <tr><td>id</td><td><span class="schema-type">uuid</span></td><td>ID mutasi</td></tr>
+                <tr><td>user_id</td><td><span class="schema-type">uuid</span></td><td>ID user terkait</td></tr>
+                <tr><td>type</td><td><span class="schema-type">enum</span></td><td><span class="schema-enum">deposit · pembelian · refund</span></td></tr>
+                <tr><td>direction</td><td><span class="schema-type">enum</span></td><td><span class="schema-enum">+ · -</span></td></tr>
+                <tr><td>amount</td><td><span class="schema-type">integer</span></td><td>Nominal dalam Rupiah</td></tr>
+                <tr><td>balance_before</td><td><span class="schema-type">integer</span></td><td>Saldo sebelum perubahan</td></tr>
+                <tr><td>balance_after</td><td><span class="schema-type">integer</span></td><td>Saldo setelah perubahan</td></tr>
+                <tr><td>note</td><td><span class="schema-type">string?</span></td><td>Keterangan</td></tr>
+                <tr><td>ref_id</td><td><span class="schema-type">string?</span></td><td>ID transaksi terkait</td></tr>
+                <tr><td>created_at</td><td><span class="schema-type">datetime</span></td><td>Timestamp</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="endpoint" id="schema-balance">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-path">BalanceChangeRequest</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <table class="schema-table">
+              <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Deskripsi</th></tr></thead>
+              <tbody>
+                <tr><td>type</td><td><span class="schema-type">enum</span></td><td>Ya</td><td><span class="schema-enum">deposit · pembelian · refund</span></td></tr>
+                <tr><td>direction</td><td><span class="schema-type">enum</span></td><td>Ya</td><td><span class="schema-enum">+ · -</span></td></tr>
+                <tr><td>amount</td><td><span class="schema-type">integer</span></td><td>Ya</td><td>Min 1, dalam Rupiah</td></tr>
+                <tr><td>note</td><td><span class="schema-type">string?</span></td><td>Tidak</td><td>Max 500 char</td></tr>
+                <tr><td>ref_id</td><td><span class="schema-type">string?</span></td><td>Tidak</td><td>Max 100 char</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div style="padding-top:40px; border-top: 1px solid var(--color-border); margin-top: 40px;">
+        <p style="font-size:13px; color:var(--color-text-faint);">
+          Jywa API v1.0.0 — <a href="/openapi.yaml" style="color:var(--color-brand-deep); text-decoration:none;">Download OpenAPI spec</a>
+        </p>
+      </div>
+    </main>
+  </div>
+
+  <button class="menu-toggle" id="menu-toggle" aria-label="Toggle menu">
+    <svg width="22" height="22" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+
+  <script>
+    // Toggle endpoint expansion
+    function toggleEndpoint(header) {
+      const ep = header.parentElement;
+      ep.classList.toggle('open');
+    }
+
+    // Copy code
+    function copyCode(btn) {
+      const pre = btn.closest('.code-block').querySelector('pre code');
+      navigator.clipboard.writeText(pre.textContent).then(() => {
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+      });
+    }
+
+    // Theme toggle
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeLabel = document.getElementById('theme-label');
+    const iconSun = document.getElementById('icon-sun');
+    const iconMoon = document.getElementById('icon-moon');
+    const savedTheme = localStorage.getItem('jywa-docs-theme');
+    if (savedTheme === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      iconSun.style.display = 'none';
+      iconMoon.style.display = 'block';
+      themeLabel.textContent = 'Light';
+    }
+    themeToggle.addEventListener('click', () => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      if (isDark) {
+        document.documentElement.setAttribute('data-theme', 'light');
+        iconSun.style.display = 'block';
+        iconMoon.style.display = 'none';
+        themeLabel.textContent = 'Dark';
+        localStorage.setItem('jywa-docs-theme', 'light');
+      } else {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        iconSun.style.display = 'none';
+        iconMoon.style.display = 'block';
+        themeLabel.textContent = 'Light';
+        localStorage.setItem('jywa-docs-theme', 'dark');
+      }
+    });
+
+    // Sidebar navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        const target = item.getAttribute('data-target');
+        const el = document.getElementById(target);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          el.classList.add('open');
+          // Close sidebar on mobile
+          document.getElementById('sidebar').classList.remove('open');
+          document.getElementById('sidebar-overlay').classList.remove('show');
+        }
+        // Highlight active
+        document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+      });
+    });
+
+    // Mobile menu
+    const menuToggle = document.getElementById('menu-toggle');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebar-overlay');
+    menuToggle.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('show');
+    });
+    overlay.addEventListener('click', () => {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('show');
+    });
+
+    // Scroll spy — highlight nav item based on scroll position
+    const sections = document.querySelectorAll('.section, .endpoint');
+    const navItems = document.querySelectorAll('.nav-item');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const id = entry.target.id;
+          navItems.forEach(item => {
+            item.classList.toggle('active', item.getAttribute('data-target') === id);
+          });
+        }
+      });
+    }, { rootMargin: '-80px 0px -70% 0px' });
+    sections.forEach(s => observer.observe(s));
+  </script>
+</body>
+</html>
