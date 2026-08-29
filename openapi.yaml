@@ -486,8 +486,15 @@ paths:
       description: |
         Membaca daftar harga dari JSON cache lokal (bukan langsung ke upstream Digiflazz).
         Cache otomatis disinkronkan setiap 10 menit (round-robin prepaid↔pasca).
-        Filter: `cmd=prepaid` (default) atau `cmd=pasca`, `category`, `search`, `status=true`.
-        Gunakan `POST /api/digiflazz/harga/refresh` untuk sinkronisasi manual.
+
+        Harga otomatis di-markup sesuai role pemanggil.
+        Role markup: owner (no markup), bronze +3%, silver +2%, gold +1%, reseller +50 (flat).
+        Setiap produk menyertakan harga_modal (harga asli Digiflazz) dan harga
+        (object per-role atau nilai tunggal bila filter role diberikan).
+        Tanpa role, response memuat full map harga: owner/bronze/silver/gold/reseller.
+
+        Filter: cmd=prepaid (default) atau cmd=pasca, category, search, status=true, role.
+        Gunakan POST /api/digiflazz/harga/refresh untuk sinkronisasi manual.
       security:
         - bearerAuth: []
       parameters:
@@ -509,9 +516,15 @@ paths:
           in: query
           schema:
             type: boolean
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [owner, bronze, silver, gold, reseller]
+          description: "Harga dihitung untuk role ini (defaultnya: role dari token yang memanggil)"
       responses:
         '200':
-          description: Daftar produk dari cache
+          description: Daftar produk dari cache dengan harga markup
           content:
             application/json:
               schema:
@@ -521,7 +534,25 @@ paths:
                   products:
                     type: array
                     items:
-                      $ref: '#/components/schemas/DigiflazzProduct'
+                      allOf:
+                        - $ref: '#/components/schemas/DigiflazzProduct'
+                        - type: object
+                          properties:
+                            harga_modal:
+                              type: number
+                            harga:
+                              oneOf:
+                                - type: number
+                                - type: object
+                                  properties:
+                                    owner: { type: number }
+                                    bronze: { type: number }
+                                    silver: { type: number }
+                                    gold: { type: number }
+                                    reseller: { type: number }
+                  role:
+                    type: string
+                    enum: [owner, bronze, silver, gold, reseller]
                   source:
                     type: string
                     enum: [cache]

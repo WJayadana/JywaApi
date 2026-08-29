@@ -962,7 +962,7 @@
             <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
           <div class="endpoint-body">
-            <p class="endpoint-desc">Membaca daftar harga dari JSON cache lokal (tidak hit upstream). Cache otomatis disinkronkan tiap 10 menit secara round-robin <code>prepaid</code>↔<code>pasca</code>. Filter opsional: <code>category</code>, <code>search</code>, <code>status=true</code>. Gunakan endpoint refresh untuk sinkronisasi manual.</p>
+            <p class="endpoint-desc">Membaca daftar harga dari JSON cache lokal (tidak hit upstream). Cache otomatis disinkronkan tiap 10 menit secara round-robin <code>prepaid</code>↔<code>pasca</code>. <strong>Harga otomatis di-markup sesuai role:</strong> bronze +3%, silver +2%, gold +1%, reseller +50 flat, owner tanpa markup. Setiap produk punya <code>harga_modal</code> (harga asli, hanya owner) dan <code>harga</code> (per role). Bisa diakses semua user login (bukan cuma owner).</p>
             <div class="params-title">Query Parameters</div>
             <table class="params-table"><thead><tr><th>Param</th><th>Type</th><th>Default</th><th>Deskripsi</th></tr></thead><tbody><tr><td>cmd</td><td><span class="param-type">enum</span></td><td>prepaid</td><td><code>prepaid</code> atau <code>pasca</code></td></tr></tbody></table>
           </div>

@@ -4,6 +4,7 @@ const { authenticate, requireRole } = require('../middleware/auth');
 const Digiflazz = require('../providers/digiflazz');
 const { DigiflazzError } = require('../providers/digiflazz');
 const config = require('../config');
+const pricelist = require('../services/pricelist');
 
 const router = express.Router();
 const ownerOnly = requireRole('owner');
@@ -27,44 +28,52 @@ function handleError(error, res, next) {
   next(error);
 }
 
-// ─── Owner-only routes ──────────────────────────────────────────────
-router.use(authenticate, ownerOnly);
+// ─── Public (any authenticated user) ───────────────────────────────
+router.use(authenticate);
 
-// GET /api/digiflazz/saldo
-router.get('/saldo', async (req, res, next) => {
-  try {
-    const data = await client().cekSaldo();
-    res.json(data);
-  } catch (error) { handleError(error, res, next); }
-});
-
-// GET /api/digiflazz/harga?cmd=prepaid|pasca&category=&search=&status=&refresh=true
-// Baca dari database cache. Tidak langsung hit upstream — gunakan /refresh untuk sync.
-const pricelist = require('../services/pricelist');
-
+// GET /api/digiflazz/harga?cmd=prepaid|pasca&category=&search=&status=&role=bronze|silver|gold|reseller|owner
+// Reads from JSON cache (no upstream). Price is automatically marked up per caller's role.
+// Without `role` query, returns the full per-role price map so the frontend can render multiple tiers.
 router.get('/harga', async (req, res, next) => {
   const cmd = req.query.cmd || 'prepaid';
   if (cmd !== 'prepaid' && cmd !== 'pasca') {
     return res.status(400).json({ error: 'ValidationError', message: 'cmd must be "prepaid" or "pasca"' });
   }
+  const requestedRole = req.query.role;
+  if (requestedRole && !['owner', 'bronze', 'silver', 'gold', 'reseller'].includes(requestedRole)) {
+    return res.status(400).json({ error: 'ValidationError', message: 'role must be one of owner/bronze/silver/gold/reseller' });
+  }
+  const callerRole = req.user.role;
+  const effectiveRole = requestedRole || callerRole;
   try {
     const products = pricelist.readFromCache({
       cmd,
       category: typeof req.query.category === 'string' ? req.query.category : undefined,
       search: typeof req.query.search === 'string' ? req.query.search : undefined,
       status: req.query.status === undefined ? undefined : req.query.status === 'true',
+      role: effectiveRole,
     });
     return res.json({
       products,
+      role: callerRole,
       last_updated: pricelist.lastUpdated() ? new Date(pricelist.lastUpdated()).toISOString() : null,
       source: 'cache',
     });
   } catch (error) { handleError(error, res, next); }
 });
 
+// ─── Owner-only routes ─────────────────────────────────────────────
+
+router.get('/saldo', ownerOnly, async (req, res, next) => {
+  try {
+    const data = await client().cekSaldo();
+    res.json(data);
+  } catch (error) { handleError(error, res, next); }
+});
+
 // POST /api/digiflazz/harga/refresh  { cmd?: prepaid|pasca }
 // Owner-triggered upstream sync. Rate limited by Digiflazz (5 min), we default to prepaid.
-router.post('/harga/refresh', async (req, res, next) => {
+router.post('/harga/refresh', ownerOnly, async (req, res, next) => {
   const cmd = req.body?.cmd || 'prepaid';
   if (cmd !== 'prepaid' && cmd !== 'pasca') {
     return res.status(400).json({ error: 'ValidationError', message: 'cmd must be "prepaid" or "pasca"' });
@@ -81,7 +90,7 @@ router.post('/harga/refresh', async (req, res, next) => {
 });
 
 // POST /api/digiflazz/deposit  { amount, bank, owner_name }
-router.post('/deposit', async (req, res, next) => {
+router.post('/deposit', ownerOnly, async (req, res, next) => {
   const { amount, bank, owner_name } = req.body || {};
   if (!Number.isInteger(amount) || amount <= 0) {
     return res.status(400).json({ error: 'ValidationError', message: 'amount must be a positive integer' });
@@ -99,7 +108,7 @@ router.post('/deposit', async (req, res, next) => {
 });
 
 // POST /api/digiflazz/transaksi  { sku, customer_no, ref_id, commands?, testing? }
-router.post('/transaksi', async (req, res, next) => {
+router.post('/transaksi', ownerOnly, async (req, res, next) => {
   const { sku, customer_no, ref_id, commands, testing } = req.body || {};
   if (!sku || typeof sku !== 'string') {
     return res.status(400).json({ error: 'ValidationError', message: 'sku is required' });

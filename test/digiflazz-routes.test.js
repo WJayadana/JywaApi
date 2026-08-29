@@ -104,7 +104,7 @@ test('digiflazz routes: owner-only access, saldo/harga/deposit/transaksi proxied
   response = await request('/api/digiflazz/saldo');
   assert.equal(response.status, 401);
 
-  // Bronze → 403
+  // Bronze cannot access saldo (owner-only)
   response = await request('/api/digiflazz/saldo', { headers: auth(bronzeToken) });
   assert.equal(response.status, 403);
 
@@ -117,12 +117,21 @@ test('digiflazz routes: owner-only access, saldo/harga/deposit/transaksi proxied
   await request('/api/digiflazz/harga/refresh', { method: 'POST', headers: auth(ownerToken), body: JSON.stringify({}) });
   assert.ok(mockRequests.find((r) => r.path === '/price-list'), 'refresh should hit upstream');
 
+  // Bronze CAN access harga (open to all authenticated users) — reads seeded cache
+  response = await request('/api/digiflazz/harga', { headers: auth(bronzeToken) });
+  assert.equal(response.status, 200);
+  assert.equal(response.body.role, 'bronze');
+  assert.equal(response.body.products[0].harga, Math.ceil(25000 * 1.03), 'bronze gets +3% markup');
+  assert.equal(response.body.products[0].harga_modal, undefined, 'harga_modal hidden for bronze');
+
   // Price list (prepaid default) — reads from cache
   response = await request('/api/digiflazz/harga', { headers: auth(ownerToken) });
   assert.equal(response.status, 200);
   assert.equal(response.body.source, 'cache');
   assert.equal(response.body.products.length, 1);
   assert.equal(response.body.products[0].buyer_sku_code, 'xld25');
+  assert.equal(response.body.products[0].harga, 25000, 'owner sees base price');
+  assert.equal(response.body.products[0].harga_modal, 25000, 'owner still sees harga_modal');
 
   // Pasca refresh + read
   await request('/api/digiflazz/harga/refresh', { method: 'POST', headers: auth(ownerToken), body: JSON.stringify({ cmd: 'pasca' }) });

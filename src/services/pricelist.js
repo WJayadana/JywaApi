@@ -76,9 +76,32 @@ async function fetchAndStore(cmd = 'prepaid') {
   return items.length;
 }
 
+const ROLE_MARKUP = {
+  owner:    (modal) => modal,
+  bronze:   (modal) => Math.ceil(modal * 1.03),
+  silver:   (modal) => Math.ceil(modal * 1.02),
+  gold:     (modal) => Math.ceil(modal * 1.01),
+  reseller: (modal) => modal + 50,
+};
+
+const ROLES = Object.keys(ROLE_MARKUP);
+
+/**
+ * Compute harga per role from a modal (raw Digiflazz price).
+ * @param {number} modal
+ * @returns {Record<string, number>} { owner, bronze, silver, gold, reseller }
+ */
+function computeHarga(modal) {
+  const result = {};
+  for (const role of ROLES) {
+    result[role] = ROLE_MARKUP[role](Number(modal) || 0);
+  }
+  return result;
+}
+
 /**
  * Baca produk dari JSON cache. Tidak pernah menyentuh upstream.
- * @param {object} [filters] - { cmd, category, search, status }
+ * @param {object} [filters] - { cmd, category, search, status, role }
  * @returns {Array<object>}
  */
 function readFromCache(filters = {}) {
@@ -111,7 +134,21 @@ function readFromCache(filters = {}) {
     return String(a.product_name || '').localeCompare(String(b.product_name || ''));
   });
 
-  return products;
+  // Apply role-based pricing markup
+  const role = filters.role && ROLES.includes(filters.role) ? filters.role : null;
+  return products.map((p) => {
+    const modal = Number(p.price) || 0;
+    if (role) {
+      const out = { ...p };
+      out.harga = ROLE_MARKUP[role](modal);
+      if (role === 'owner') {
+        out.harga_modal = modal;
+      }
+      return out;
+    }
+    // No role filter: return full map + modal
+    return { ...p, harga_modal: modal, harga: computeHarga(modal) };
+  });
 }
 
 /**
@@ -124,4 +161,4 @@ function lastUpdated(cmd = 'prepaid') {
   return store[cmd] && store[cmd].last_updated ? store[cmd].last_updated : null;
 }
 
-module.exports = { fetchAndStore, readFromCache, lastUpdated };
+module.exports = { fetchAndStore, readFromCache, lastUpdated, computeHarga, ROLE_MARKUP };
