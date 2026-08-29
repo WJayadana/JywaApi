@@ -46,9 +46,10 @@ router.post('/', authenticate, async (req, res) => {
         amount,
         order_id: orderId,
         callback_url: GOBIZ_WEBHOOK_CALLBACK_URL,
-        expires_in: 900, // 15 menit
+        expires_in: 900,
         metadata: { deposit_id: depositId, user_id: user.id },
       });
+      console.log('[/api/deposits] gobizResult:', JSON.stringify(gobizResult));
     } catch (fetchErr) {
       console.error('[/api/deposits] GoBiz fetch error:', fetchErr);
       return res.status(502).json({
@@ -57,14 +58,14 @@ router.post('/', authenticate, async (req, res) => {
       });
     }
 
-    if (!gobizResult.ok || !gobizResult.data?.data) {
+    if (!gobizResult.ok || !gobizResult.data?.id) {
       return res.status(502).json({
         error: 'UpstreamError',
         message: gobizResult.data?.error?.message || 'gagal membuat invoice QRIS',
       });
     }
 
-    const gData = gobizResult.data.data;
+    const gData = gobizResult.data;
     const gobizId = gData.id;
     const qrisString = gData.qris_string || '';
     const expectedAmount = gData.expected_amount || amount;
@@ -159,8 +160,8 @@ router.get('/:id', authenticate, async (req, res) => {
       try {
         gobizData = await gobiz.getPayment(row.gobiz_payment_id);
       } catch (_) { /* ignore */ }
-      if (gobizData?.data?.qris_string) {
-        row.qris_string = gobizData.data.qris_string;
+      if (gobizData?.qris_string) {
+        row.qris_string = gobizData.qris_string;
       }
     }
 

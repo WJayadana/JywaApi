@@ -51,7 +51,7 @@ async function getPayment(id) {
   });
   if (!res.ok) return null;
   const data = await res.json().catch(() => null);
-  return data?.data ?? null;
+  return data ?? null;
 }
 
 /**

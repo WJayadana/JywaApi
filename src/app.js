@@ -87,13 +87,22 @@ app.post('/api/gobiz/webhook', express.raw({ type: 'application/json', limit: '1
   if (deposit.status !== 'pending') return res.status(200).json({ received: true, status: deposit.status });
 
   if (status === 'paid') {
-    db.prepare(`UPDATE deposits SET status = 'paid', paid_at = datetime('now') WHERE id = ?`).run(deposit.id);
-    db.prepare(`UPDATE users SET balance = balance + ? WHERE id = ?`).run(deposit.amount, deposit.user_id);
-    db.prepare(`INSERT INTO mutations (id, user_id, type, direction, amount, note) VALUES (?,?,?,?,?,?)`).run(
-      crypto.randomUUID(), deposit.user_id, 'deposit', '+', deposit.amount,
-      `QRIS Deposit ${deposit.expected_amount} → credited (gobiz: ${id})`
-    );
-    db.prepare(`UPDATE deposits SET status = 'credited', credited_at = datetime('now') WHERE id = ?`).run(deposit.id);
+    // Atomically: credit balance + log mutation
+    const runTx = db.transaction(() => {
+      const user = db.prepare('SELECT id, balance FROM users WHERE id = ?').get(deposit.user_id);
+      if (!user) return false;
+      const balanceBefore = user.balance || 0;
+      db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(deposit.amount, deposit.user_id);
+      db.prepare(`UPDATE deposits SET status = 'paid', paid_at = datetime('now') WHERE id = ?`).run(deposit.id);
+      db.prepare(`INSERT INTO mutations (id, user_id, type, direction, amount, balance_before, balance_after, note) VALUES (?,?,?,?,?,?,?,?)`).run(
+        crypto.randomUUID(), deposit.user_id, 'deposit', '+', deposit.amount,
+        balanceBefore, balanceBefore + deposit.amount,
+        `QRIS Deposit ${deposit.expected_amount} → credited (gobiz: ${id})`
+      );
+      db.prepare("UPDATE deposits SET status = 'credited', credited_at = datetime('now') WHERE id = ?").run(deposit.id);
+      return true;
+    });
+    runTx();
   } else if (status === 'expired' || status === 'cancelled') {
     db.prepare(`UPDATE deposits SET status = ? WHERE id = ?`).run(status, deposit.id);
   }
