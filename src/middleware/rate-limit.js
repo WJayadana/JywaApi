@@ -44,7 +44,7 @@ function rateLimitByApiKey() {
       ).run(userId, window);
     } else {
       db.prepare(
-        'INSERT INTO rate_limits (user_id, window_start, count) VALUES (?, ?, 1)'
+        'INSERT INTO rate_limits (user_id, window_start, count) VALUES (?, ?, ?)'
       ).run(userId, window, 1);
     }
 
