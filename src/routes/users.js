@@ -7,6 +7,10 @@ const { applyBalance } = require('../balance');
 const { logAuthEvent, EVENTS } = require('../services/auth-log');
 const { validateIpList } = require('../services/ip-whitelist');
 const {
+  validateWebhookUrl,
+  generateSecret: generateWebhookSecret,
+} = require('../services/webhook-reseller');
+const {
   PUBLIC_USER_COLUMNS,
   serializeUser,
   normalizeUsername,
@@ -193,6 +197,46 @@ router.put('/me/api-key/ips', (req, res) => {
   db.prepare("UPDATE users SET api_key_ips = ?, updated_at = datetime('now') WHERE id = ?")
     .run(stored, req.user.id);
   res.json({ ips: result.ips });
+});
+
+// ─── Reseller webhook (self-service) ────────────────────────────────
+// Owner can register a single endpoint to receive `transaction.update` events.
+// Set → generates secret (returned once). Get → returns URL only.
+// Test ping → POST fires a `ping` event. Delete → no more deliveries.
+
+router.get('/me/webhook', (req, res) => {
+  const row = db.prepare('SELECT webhook_url FROM users WHERE id = ?').get(req.user.id);
+  res.json({ url: row && row.webhook_url ? row.webhook_url : null });
+});
+
+router.put('/me/webhook', (req, res) => {
+  const body = req.body || {};
+  const validation = validateWebhookUrl(body.url);
+  if (!validation.ok) {
+    return res.status(400).json({ error: 'ValidationError', message: validation.error });
+  }
+  const url = validation.url;
+  const existing = db.prepare(
+    'SELECT webhook_secret FROM users WHERE id = ?'
+  ).get(req.user.id);
+  const secret = existing && existing.webhook_secret ? existing.webhook_secret : generateWebhookSecret();
+  db.prepare(
+    "UPDATE users SET webhook_url = ?, webhook_secret = ?, updated_at = datetime('now') WHERE id = ?"
+  ).run(url, secret, req.user.id);
+  res.json({ url, webhook_secret: secret });
+});
+
+router.post('/me/webhook/test', async (req, res) => {
+  const { dispatch } = require('../services/webhook-reseller');
+  dispatch(req.user.id, 'ping', { message: 'test ping from jywa-api' });
+  res.json({ sent: true });
+});
+
+router.delete('/me/webhook', (req, res) => {
+  db.prepare(
+    "UPDATE users SET webhook_url = NULL, webhook_secret = NULL, updated_at = datetime('now') WHERE id = ?"
+  ).run(req.user.id);
+  res.json({ deleted: true });
 });
 
 router.get('/', ownerOnly, (req, res) => {

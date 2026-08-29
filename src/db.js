@@ -80,10 +80,33 @@ CREATE INDEX IF NOT EXISTS idx_auth_logs_user ON auth_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_auth_logs_created ON auth_logs(created_at);
 `);
 
-// Lightweight migration: add api_key_ips to pre-existing databases.
+// Lightweight migrations for pre-existing databases.
 const userColumns = db.prepare("PRAGMA table_info('users')").all().map((column) => column.name);
 if (!userColumns.includes('api_key_ips')) {
   db.exec('ALTER TABLE users ADD COLUMN api_key_ips TEXT');
 }
+if (!userColumns.includes('webhook_url')) {
+  db.exec('ALTER TABLE users ADD COLUMN webhook_url TEXT');
+}
+if (!userColumns.includes('webhook_secret')) {
+  db.exec('ALTER TABLE users ADD COLUMN webhook_secret TEXT');
+}
+
+// Webhook deliveries are an audit trail; each retry gets its own row.
+db.exec(`
+CREATE TABLE IF NOT EXISTS webhook_deliveries (
+  id           TEXT PRIMARY KEY,
+  user_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  event        TEXT NOT NULL,
+  payload      TEXT NOT NULL,
+  attempt      INTEGER NOT NULL,
+  status       TEXT NOT NULL CHECK (status IN ('pending', 'delivered', 'failed')),
+  status_code  INTEGER,
+  delivered_at TEXT,
+  created_at   TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_user ON webhook_deliveries(user_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_created ON webhook_deliveries(created_at);
+`);
 
 module.exports = db;

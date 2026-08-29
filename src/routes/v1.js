@@ -8,6 +8,7 @@ const pricelist = require('../services/pricelist');
 const Digiflazz = require('../providers/digiflazz');
 const { DigiflazzError } = require('../providers/digiflazz');
 const config = require('../config');
+const { dispatch } = require('../services/webhook-reseller');
 
 const router = express.Router();
 
@@ -203,7 +204,9 @@ router.post('/transactions', async (req, res, next) => {
         provider_rc: rc,
         provider_msg: message,
       });
-      return res.status(201).json(publicTransaction(getTransaction(req.user.id, refId)));
+      const txn = getTransaction(req.user.id, refId);
+      dispatch(req.user.id, 'transaction.update', publicTransaction(txn));
+      return res.status(201).json(publicTransaction(txn));
     }
 
     // Upstream declined: refund the exact debit and mark transaction failed.

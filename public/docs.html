@@ -394,6 +394,10 @@
         <a class="nav-item" data-target="my-activity"><span class="method-badge method-get">GET</span> /api/users/me/activity</a>
         <a class="nav-item" data-target="my-api-key-ips"><span class="method-badge method-get">GET</span> /api/users/me/api-key/ips</a>
         <a class="nav-item" data-target="my-api-key-ips-put"><span class="method-badge method-put">PUT</span> /api/users/me/api-key/ips</a>
+        <a class="nav-item" data-target="my-webhook"><span class="method-badge method-get">GET</span> /api/users/me/webhook</a>
+        <a class="nav-item" data-target="my-webhook-put"><span class="method-badge method-put">PUT</span> /api/users/me/webhook</a>
+        <a class="nav-item" data-target="my-webhook-test"><span class="method-badge method-post">POST</span> /api/users/me/webhook/test</a>
+        <a class="nav-item" data-target="my-webhook-del"><span class="method-badge method-delete">DEL</span> /api/users/me/webhook</a>
       </div>
       <div class="nav-section" data-section="owner">
         <div class="nav-section-title">Owner Only</div>
@@ -874,6 +878,77 @@
                 <div class="code-block-header"><span class="code-block-label">Response</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
                 <pre><code>{ "ips": ["203.0.113.10", "10.0.0.0/8"] }</code></pre>
               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== WEBHOOK RESELLER ===== -->
+      <div class="section" id="webhook-section">
+        <div class="section-header"><h2>Webhook Reseller</h2></div>
+        <p class="section-desc">Endpoint untuk mendaftarkan URL webhook HTTPS. Setiap transaksi sukses akan kirim event <code>transaction.update</code> dengan signature HMAC-SHA256 via header <code>X-Jywa-Signature</code>. Secret dikembalikan SAAT PERTAMA SET, tidak pernah tampil lagi.</p>
+
+        <div class="endpoint" id="my-webhook" data-method="GET" data-path="/api/users/me/webhook" data-auth="true">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method method-get">GET</span>
+            <span class="endpoint-path">/api/users/me/webhook</span>
+            <span class="auth-badge">JWT</span>
+          </div>
+          <div class="endpoint-body" style="display:none">
+            <p class="endpoint-desc">Melihat URL webhook yang sudah diset (secret TIDAK dikembalikan).</p>
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-label">Response</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre><code>{ "url": "https://reseller.example.com/hooks/jywa" }</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="endpoint" id="my-webhook-put" data-method="PUT" data-path="/api/users/me/webhook" data-auth="true" data-body="url">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method method-put">PUT</span>
+            <span class="endpoint-path">/api/users/me/webhook</span>
+            <span class="auth-badge">JWT</span>
+          </div>
+          <div class="endpoint-body" style="display:none">
+            <p class="endpoint-desc">Mendaftarkan / update URL webhook. Return <code>webhook_secret</code> HANYA di response pertama — SEKALI SAJA, simpan di sisi client.</p>
+            <div class="param-row"><span class="param-name">url</span><span class="param-type">string (uri)</span><span class="param-required">required</span></div>
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-label">Request Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre><code>{ "url": "https://reseller.example.com/hooks/jywa" }</code></pre>
+            </div>
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-label">Response</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre><code>{ "url": "https://reseller.example.com/hooks/jywa", "webhook_secret": "whsec_abc123..." }</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="endpoint" id="my-webhook-test" data-method="POST" data-path="/api/users/me/webhook/test" data-auth="true">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method method-post">POST</span>
+            <span class="endpoint-path">/api/users/me/webhook/test</span>
+            <span class="auth-badge">JWT</span>
+          </div>
+          <div class="endpoint-body" style="display:none">
+            <p class="endpoint-desc">Kirim event <code>ping</code> ke webhook (async, tidak blokir). Berguna untuk verify URL + secret.</p>
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-label">Response</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre><code>{ "sent": true }</code></pre>
+            </div>
+          </div>
+        </div>
+
+        <div class="endpoint" id="my-webhook-del" data-method="DELETE" data-path="/api/users/me/webhook" data-auth="true">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method method-delete">DELETE</span>
+            <span class="endpoint-path">/api/users/me/webhook</span>
+            <span class="auth-badge">JWT</span>
+          </div>
+          <div class="endpoint-body" style="display:none">
+            <p class="endpoint-desc">Hapus webhook. Tidak ada lagi event yang dikirim.</p>
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-label">Response</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre><code>{ "deleted": true }</code></pre>
             </div>
           </div>
         </div>
