@@ -1,0 +1,96 @@
+name: CI & Deploy
+
+on:
+  # Run tests on every push to any branch
+  push:
+    branches: ['**']
+
+  # Manual trigger: run tests + deploy to production
+  workflow_dispatch:
+    inputs:
+      skip_tests:
+        description: 'Skip test run before deploy'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '22'
+  DEPLOY_USER: 'root'
+  DEPLOY_HOST: '95.111.198.183'
+  DEPLOY_PATH: '/root/JywaApi'
+  SSH_PRIVATE_KEY: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+
+jobs:
+  # ── Unit tests ────────────────────────────────────────────────────────
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          DIGIFLAZZ_USERNAME: ${{ secrets.DIGIFLAZZ_USERNAME }}
+          DIGIFLAZZ_API_KEY: ${{ secrets.DIGIFLAZZ_API_KEY }}
+
+  # ── Deploy to production ───────────────────────────────────────────────
+  deploy:
+    name: Deploy to Production
+    needs: test
+    runs-on: ubuntu-latest
+    # Only deploy on push to main, or manual workflow_dispatch
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests (unless skipped)
+        if: ${{ github.event.inputs.skip_tests != true }}
+        run: npm test
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          DIGIFLAZZ_USERNAME: ${{ secrets.DIGIFLAZZ_USERNAME }}
+          DIGIFLAZZ_API_KEY: ${{ secrets.DIGIFLAZZ_API_KEY }}
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ env.DEPLOY_HOST }}
+          username: ${{ env.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            set -e
+            cd ${{ env.DEPLOY_PATH }}
+            git pull origin main
+            npm ci --omit=dev --ignore-scripts 2>/dev/null || npm ci
+            systemctl restart jywa-api
+            sleep 3
+            curl -sf https://jywa.tech/health || { echo "HEALTH CHECK FAILED"; exit 1; }
+            echo "Deploy successful — jywa-api is healthy"

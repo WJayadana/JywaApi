@@ -11,6 +11,7 @@
   },
   "keywords": [],
   "author": "",
+  "repository": "github:WJayadana/JywaApi",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
