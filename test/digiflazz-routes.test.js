@@ -15,6 +15,7 @@ process.env.DB_PATH = path.join(tempDir, 'test.db');
 process.env.DIGIFLAZZ_USERNAME = 'digiuser';
 process.env.DIGIFLAZZ_API_KEY = 'digikey';
 process.env.DIGIFLAZZ_WEBHOOK_SECRET = 'hooksecret';
+process.env.DIGIFLAZZ_CACHE_PATH = path.join(tempDir, 'products.json');
 
 const app = require('../src/app');
 const db = require('../src/db');
@@ -112,20 +113,40 @@ test('digiflazz routes: owner-only access, saldo/harga/deposit/transaksi proxied
   assert.equal(response.status, 200);
   assert.equal(response.body.deposit, 1000000);
 
-  // Price list (prepaid default)
+  // Seed cache (will hit upstream mock)
+  await request('/api/digiflazz/harga/refresh', { method: 'POST', headers: auth(ownerToken), body: JSON.stringify({}) });
+  assert.ok(mockRequests.find((r) => r.path === '/price-list'), 'refresh should hit upstream');
+
+  // Price list (prepaid default) — reads from cache
   response = await request('/api/digiflazz/harga', { headers: auth(ownerToken) });
   assert.equal(response.status, 200);
+  assert.equal(response.body.source, 'cache');
+  assert.equal(response.body.products.length, 1);
   assert.equal(response.body.products[0].buyer_sku_code, 'xld25');
 
-  // Price list pasca
+  // Pasca refresh + read
+  await request('/api/digiflazz/harga/refresh', { method: 'POST', headers: auth(ownerToken), body: JSON.stringify({ cmd: 'pasca' }) });
+  const pascaReq = mockRequests.find((r) => r.path === '/price-list' && r.body.cmd === 'pasca');
+  assert.ok(pascaReq, 'pasca cmd should be forwarded on refresh');
   response = await request('/api/digiflazz/harga?cmd=pasca', { headers: auth(ownerToken) });
   assert.equal(response.status, 200);
-  const pascaReq = mockRequests.find((r) => r.path === '/price-list' && r.body.cmd === 'pasca');
-  assert.ok(pascaReq, 'pasca cmd should be forwarded');
+  assert.equal(response.body.products.length, 1);
 
-  // Invalid cmd → 400
+  // Invalid cmd → 400 (read path)
   response = await request('/api/digiflazz/harga?cmd=nonsense', { headers: auth(ownerToken) });
   assert.equal(response.status, 400);
+
+  // Invalid cmd → 400 (refresh path)
+  response = await request('/api/digiflazz/harga/refresh', {
+    method: 'POST',
+    headers: auth(ownerToken),
+    body: JSON.stringify({ cmd: 'nonsense' }),
+  });
+  assert.equal(response.status, 400);
+
+  // Bronze cannot refresh
+  response = await request('/api/digiflazz/harga/refresh', { method: 'POST', headers: auth(bronzeToken), body: JSON.stringify({}) });
+  assert.equal(response.status, 403);
 
   // Deposit ticket
   response = await request('/api/digiflazz/deposit', {

@@ -38,15 +38,45 @@ router.get('/saldo', async (req, res, next) => {
   } catch (error) { handleError(error, res, next); }
 });
 
-// GET /api/digiflazz/harga?cmd=prepaid|pasca
+// GET /api/digiflazz/harga?cmd=prepaid|pasca&category=&search=&status=&refresh=true
+// Baca dari database cache. Tidak langsung hit upstream — gunakan /refresh untuk sync.
+const pricelist = require('../services/pricelist');
+
 router.get('/harga', async (req, res, next) => {
   const cmd = req.query.cmd || 'prepaid';
   if (cmd !== 'prepaid' && cmd !== 'pasca') {
     return res.status(400).json({ error: 'ValidationError', message: 'cmd must be "prepaid" or "pasca"' });
   }
   try {
-    const data = await client().daftarHarga(cmd);
-    res.json({ products: Array.isArray(data) ? data : [data] });
+    const products = pricelist.readFromCache({
+      cmd,
+      category: typeof req.query.category === 'string' ? req.query.category : undefined,
+      search: typeof req.query.search === 'string' ? req.query.search : undefined,
+      status: req.query.status === undefined ? undefined : req.query.status === 'true',
+    });
+    return res.json({
+      products,
+      last_updated: pricelist.lastUpdated() ? new Date(pricelist.lastUpdated()).toISOString() : null,
+      source: 'cache',
+    });
+  } catch (error) { handleError(error, res, next); }
+});
+
+// POST /api/digiflazz/harga/refresh  { cmd?: prepaid|pasca }
+// Owner-triggered upstream sync. Rate limited by Digiflazz (5 min), we default to prepaid.
+router.post('/harga/refresh', async (req, res, next) => {
+  const cmd = req.body?.cmd || 'prepaid';
+  if (cmd !== 'prepaid' && cmd !== 'pasca') {
+    return res.status(400).json({ error: 'ValidationError', message: 'cmd must be "prepaid" or "pasca"' });
+  }
+  try {
+    const count = await pricelist.fetchAndStore(cmd);
+    return res.json({
+      synced: true,
+      cmd,
+      count,
+      last_updated: pricelist.lastUpdated() ? new Date(pricelist.lastUpdated()).toISOString() : null,
+    });
   } catch (error) { handleError(error, res, next); }
 });
 

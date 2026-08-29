@@ -405,6 +405,7 @@
         <div class="nav-section-title">Digiflazz</div>
         <a class="nav-item" data-target="digi-saldo"><span class="method-badge method-get">GET</span> /api/digiflazz/saldo</a>
         <a class="nav-item" data-target="digi-harga"><span class="method-badge method-get">GET</span> /api/digiflazz/harga</a>
+        <a class="nav-item" data-target="digi-refresh"><span class="method-badge method-post">POST</span> /api/digiflazz/harga/refresh</a>
         <a class="nav-item" data-target="digi-deposit"><span class="method-badge method-post">POST</span> /api/digiflazz/deposit</a>
         <a class="nav-item" data-target="digi-transaksi"><span class="method-badge method-post">POST</span> /api/digiflazz/transaksi</a>
         <a class="nav-item" data-target="digi-webhook"><span class="method-badge method-post">POST</span> /api/digiflazz/webhook</a>
@@ -953,7 +954,7 @@
           </div>
         </div>
 
-        <div class="endpoint" id="digi-harga" data-method="GET" data-path="/api/digiflazz/harga" data-auth="true" data-query="cmd">
+        <div class="endpoint" id="digi-harga" data-method="GET" data-path="/api/digiflazz/harga" data-auth="true" data-query="cmd,category,search,status">
           <div class="endpoint-header" onclick="toggleEndpoint(this)">
             <span class="endpoint-method method-get">GET</span>
             <span class="endpoint-path">/api/digiflazz/harga</span>
@@ -961,9 +962,23 @@
             <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
           <div class="endpoint-body">
-            <p class="endpoint-desc">Mengambil daftar harga dari Digiflazz. Query: <code>cmd=prepaid</code> atau <code>cmd=pasca</code>. Default: <code>prepaid</code>.</p>
+            <p class="endpoint-desc">Membaca daftar harga dari JSON cache lokal (tidak hit upstream). Cache otomatis disinkronkan tiap 10 menit secara round-robin <code>prepaid</code>↔<code>pasca</code>. Filter opsional: <code>category</code>, <code>search</code>, <code>status=true</code>. Gunakan endpoint refresh untuk sinkronisasi manual.</p>
             <div class="params-title">Query Parameters</div>
             <table class="params-table"><thead><tr><th>Param</th><th>Type</th><th>Default</th><th>Deskripsi</th></tr></thead><tbody><tr><td>cmd</td><td><span class="param-type">enum</span></td><td>prepaid</td><td><code>prepaid</code> atau <code>pasca</code></td></tr></tbody></table>
+          </div>
+        </div>
+
+        <div class="endpoint" id="digi-refresh" data-method="POST" data-path="/api/digiflazz/harga/refresh" data-auth="true" data-body="cmd">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-post">POST</span>
+            <span class="endpoint-path">/api/digiflazz/harga/refresh</span>
+            <span class="endpoint-summary">Refresh price list manual</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Memanggil upstream Digiflazz dan menyimpan seluruh hasil ke JSON cache lokal (<code>data/products.json</code>). Digiflazz membatasi price-list sekitar 5 menit; scheduler otomatis menjalankan refresh setiap 10 menit secara bergantian antara prepaid dan pasca.</p>
+            <div class="params-title">Request Body</div>
+            <table class="params-table"><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Deskripsi</th></tr></thead><tbody><tr><td>cmd</td><td><span class="param-type">enum</span></td><td>Tidak</td><td><code>prepaid</code> atau <code>pasca</code>; default <code>prepaid</code></td></tr></tbody></table>
           </div>
         </div>
 

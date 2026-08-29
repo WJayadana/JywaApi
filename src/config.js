@@ -19,6 +19,8 @@ const config = {
     apiKey: process.env.DIGIFLAZZ_API_KEY || '',
     webhookSecret: process.env.DIGIFLAZZ_WEBHOOK_SECRET || '',
     timeoutMs: Number(process.env.DIGIFLAZZ_TIMEOUT_MS) || 30000,
+    cachePath: process.env.DIGIFLAZZ_CACHE_PATH || path.join(ROOT, 'data', 'products.json'),
+    refreshIntervalMs: Number(process.env.DIGIFLAZZ_REFRESH_INTERVAL_MS) || 10 * 60 * 1000,
   },
 };
 

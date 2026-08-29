@@ -483,7 +483,11 @@ paths:
       operationId: getDigiflazzHarga
       tags: [Digiflazz]
       summary: Daftar harga produk Digiflazz
-      description: Mengambil daftar harga prepaid atau pasca. Hanya role owner.
+      description: |
+        Membaca daftar harga dari JSON cache lokal (bukan langsung ke upstream Digiflazz).
+        Cache otomatis disinkronkan setiap 10 menit (round-robin prepaid↔pasca).
+        Filter: `cmd=prepaid` (default) atau `cmd=pasca`, `category`, `search`, `status=true`.
+        Gunakan `POST /api/digiflazz/harga/refresh` untuk sinkronisasi manual.
       security:
         - bearerAuth: []
       parameters:
@@ -493,19 +497,81 @@ paths:
             type: string
             enum: [prepaid, pasca]
             default: prepaid
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: boolean
       responses:
         '200':
-          description: Daftar produk
+          description: Daftar produk dari cache
           content:
             application/json:
               schema:
                 type: object
-                required: [products]
+                required: [products, source]
                 properties:
                   products:
                     type: array
                     items:
                       $ref: '#/components/schemas/DigiflazzProduct'
+                  source:
+                    type: string
+                    enum: [cache]
+                    example: cache
+                  last_updated:
+                    type: string
+                    format: date-time
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '502':
+          $ref: '#/components/responses/ProviderError'
+  /api/digiflazz/harga/refresh:
+    post:
+      operationId: refreshDigiflazzHarga
+      tags: [Digiflazz]
+      summary: Sinkronkan daftar harga dari Digiflazz
+      description: Memanggil upstream Digiflazz dan menyimpan hasil ke database cache. Rate limit Digiflazz ±5 menit.
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cmd:
+                  type: string
+                  enum: [prepaid, pasca]
+                  default: prepaid
+      responses:
+        '200':
+          description: Sinkronisasi berhasil
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  synced:
+                    type: boolean
+                  cmd:
+                    type: string
+                  count:
+                    type: integer
+                  last_updated:
+                    type: string
+                    format: date-time
         '400':
           $ref: '#/components/responses/ValidationError'
         '401':

@@ -8,8 +8,14 @@ const path = require('path');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const digiflazzRoutes = require('./routes/digiflazz');
+const scheduler = require('./services/scheduler');
 const config = require('./config');
 const db = require('./db');
+
+scheduler.start();
+
+process.once('SIGTERM', () => scheduler.stop());
+process.once('SIGINT', () => scheduler.stop());
 
 const app = express();
 
