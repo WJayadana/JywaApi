@@ -22,6 +22,11 @@ async function pollPendingDeposits() {
 
       const { status, paid_at } = payment;
       if (status === 'paid') {
+        // Mark as paid FIRST (idempotent lock so concurrent pollers skip)
+        const updated = db.prepare(
+          "UPDATE deposits SET status = 'paid', paid_at = ? WHERE id = ? AND status = 'pending'"
+        ).run(paid_at, dep.id);
+        if (updated.changes === 0) continue; // already being processed
         creditDeposit(dep, paid_at);
       } else if (status === 'expired' || status === 'cancelled') {
         db.prepare('UPDATE deposits SET status = ? WHERE id = ?').run(status, dep.id);
@@ -37,7 +42,6 @@ function creditDeposit(deposit, paidAt) {
     const user = db.prepare('SELECT id, balance FROM users WHERE id = ?').get(deposit.user_id);
     if (!user) return;
     const bb = user.balance || 0;
-    db.prepare("UPDATE deposits SET status = 'paid', paid_at = ? WHERE id = ?").run(paidAt, deposit.id);
     db.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').run(deposit.amount, deposit.user_id);
     db.prepare(`INSERT INTO mutations (id, user_id, type, direction, amount, balance_before, balance_after, note) VALUES (?,?,?,?,?,?,?,?)`).run(
       crypto.randomUUID(), deposit.user_id, 'deposit', '+', deposit.amount, bb, bb + deposit.amount,
