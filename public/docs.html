@@ -417,6 +417,7 @@
         <a class="nav-item" data-target="v1-transactions"><span class="method-badge method-post">POST</span> /api/v1/transactions</a>
         <a class="nav-item" data-target="v1-list-transactions"><span class="method-badge method-get">GET</span> /api/v1/transactions</a>
         <a class="nav-item" data-target="v1-get-transaction"><span class="method-badge method-get">GET</span> /api/v1/transactions/:ref_id</a>
+        <a class="nav-item" data-target="v1-stats"><span class="method-badge method-get">GET</span> /api/v1/stats</a>
       </div>
       <div class="nav-section" data-section="schemas">
         <div class="nav-section-title">Schemas</div>
@@ -1106,6 +1107,24 @@
           </div>
         </div>
       </div>
+
+      <!-- ===== API v1 (Reseller) — Stats ===== -->
+      <section class="section" id="v1-stats-section">
+        <div class="section-header">
+          <h2>API v1 — Stats</h2>
+          <span class="tag tag-auth">API Key + Owner Only</span>
+        </div>
+        <p class="section-desc">Monitoring statistik penjualan: total transaksi, penjualan, modal, profit, dan produk terlaris. Profit hanya menghitung transaksi berstatus <code>success</code>. Gunakan query <code>from</code>/<code>to</code> (YYYY-MM-DD) untuk filter periode. Endpoint ini hanya bisa diakses memakai API key milik user role <code>owner</code>.</p>
+
+        <div class="endpoint" id="v1-stats" data-method="GET" data-path="/api/v1/stats" data-auth="true" data-query="from,to">
+          <div class="endpoint-header">
+            <span class="method-badge method-get">GET</span>
+            <code class="endpoint-path">/api/v1/stats</code>
+            <span class="tag tag-auth">API Key Owner</span>
+          </div>
+          <p class="endpoint-desc">Ringkasan statistik global. Field yang dikembalikan: <code>total_transactions</code>, <code>successful_transactions</code>, <code>failed_transactions</code>, <code>pending_transactions</code>, <code>total_sales</code>, <code>total_cost</code>, <code>total_profit</code>, dan <code>top_products</code> (top 10 produk berdasarkan revenue). Query opsional: <code>from=2026-08-01</code>, <code>to=2026-08-31</code>.</p>
+        </div>
+      </section>
 
       <!-- ===== SCHEMAS ===== -->
       <div class="section" id="schemas-section">

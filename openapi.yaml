@@ -761,6 +761,77 @@ paths:
                     type: boolean
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/v1/stats:
+    get:
+      operationId: getV1Stats
+      tags: [API v1]
+      summary: Statistik penjualan dan profit
+      description: |-
+        Statistik global untuk monitoring owner. Wajib memakai API key milik user
+        dengan role owner. Nilai penjualan, modal, dan profit hanya menghitung
+        transaksi berstatus success. Bisa difilter memakai tanggal inklusif.
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: from
+          in: query
+          description: Tanggal mulai inklusif (YYYY-MM-DD)
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+        - name: to
+          in: query
+          description: Tanggal akhir inklusif (YYYY-MM-DD)
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+      responses:
+        '200':
+          description: Ringkasan statistik
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/stats:
+    get:
+      operationId: getLegacyStats
+      tags: [Owner]
+      summary: Statistik penjualan via JWT
+      description: Alias internal owner-only untuk dashboard lama.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+        - name: to
+          in: query
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+      responses:
+        '200':
+          description: Ringkasan statistik
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   /api/v1/profile:
     get:
       operationId: v1GetProfile
@@ -949,7 +1020,8 @@ components:
     apiKeyAuth:
       type: http
       scheme: bearer
-      description: API key (jywa_live_xxx) dikirim sebagai Bearer token
+      bearerFormat: API key
+      description: API key reseller pada header Authorization.
   parameters:
     UserId:
       name: id
@@ -1124,6 +1196,44 @@ components:
         service:
           type: string
           example: jywa-api
+    StatsResponse:
+      type: object
+      required: [total_transactions, successful_transactions, failed_transactions, pending_transactions, total_sales, total_cost, total_profit, top_products]
+      properties:
+        total_transactions:
+          type: integer
+        successful_transactions:
+          type: integer
+        failed_transactions:
+          type: integer
+        pending_transactions:
+          type: integer
+        total_sales:
+          type: integer
+          description: Total harga jual transaksi sukses (rupiah).
+        total_cost:
+          type: integer
+          description: Total harga modal transaksi sukses (rupiah).
+        total_profit:
+          type: integer
+          description: Total sales dikurangi total cost (rupiah).
+        top_products:
+          type: array
+          items:
+            type: object
+            required: [sku, sold, revenue, cost, profit]
+            properties:
+              sku:
+                type: string
+              sold:
+                type: integer
+              revenue:
+                type: integer
+              cost:
+                type: integer
+              profit:
+                type: integer
+
     ErrorResponse:
       type: object
       properties:
