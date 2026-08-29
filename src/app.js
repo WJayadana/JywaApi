@@ -22,6 +22,9 @@ process.once('SIGINT', () => scheduler.stop());
 const app = express();
 
 app.disable('x-powered-by');
+// Behind Caddy reverse proxy: trust the first hop so req.ip reflects the real
+// client (Caddy sets X-Forwarded-For), not 127.0.0.1.
+app.set('trust proxy', 'loopback');
 app.use(cors());
 
 // Webhook must consume the RAW body for HMAC verification — mount it

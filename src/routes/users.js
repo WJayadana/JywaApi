@@ -4,6 +4,7 @@ const { randomUUID } = require('node:crypto');
 const db = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { applyBalance } = require('../balance');
+const { logAuthEvent, EVENTS } = require('../services/auth-log');
 const {
   PUBLIC_USER_COLUMNS,
   serializeUser,
@@ -58,6 +59,26 @@ function getMutations(userId, query) {
     pages: Math.ceil(total / limit),
     mutations,
   };
+}
+
+function getAuthLogs(userId, query) {
+  const { page, limit, offset } = parsePagination(query);
+  const event = typeof query.event === 'string' ? query.event : null;
+  if (event && !EVENTS.includes(event)) {
+    return { error: `event must be one of: ${EVENTS.join(', ')}` };
+  }
+
+  const where = event ? 'WHERE user_id = ? AND event = ?' : 'WHERE user_id = ?';
+  const params = event ? [userId, event] : [userId];
+  const total = db.prepare(`SELECT COUNT(*) AS count FROM auth_logs ${where}`).get(...params).count;
+  const logs = db.prepare(
+    `SELECT id, event, ip, user_agent, created_at
+       FROM auth_logs ${where}
+      ORDER BY created_at DESC, rowid DESC
+      LIMIT ? OFFSET ?`
+  ).all(...params, limit, offset);
+
+  return { page, limit, total, pages: Math.ceil(total / limit), logs };
 }
 
 router.use(authenticate);
@@ -121,6 +142,14 @@ router.get('/me/mutations', (req, res) => {
   res.json(result);
 });
 
+// GET /api/users/me/activity?event=&page=&limit=
+// User's own auth audit trail: logins (success/failed), API key changes.
+router.get('/me/activity', (req, res) => {
+  const result = getAuthLogs(req.user.id, req.query);
+  if (result.error) return res.status(400).json({ error: 'ValidationError', message: result.error });
+  res.json(result);
+});
+
 /** Generate a fresh API key for the caller. Any existing key is replaced. */
 function generateApiKey() {
   return 'jywa_live_' + randomUUID().replace(/-/g, '');
@@ -130,12 +159,14 @@ router.post('/me/api-key', (req, res) => {
   const apiKey = generateApiKey();
   db.prepare("UPDATE users SET api_key = ?, updated_at = datetime('now') WHERE id = ?")
     .run(apiKey, req.user.id);
+  logAuthEvent(req.user.id, 'api_key_generated', req);
   res.json({ api_key: apiKey });
 });
 
 router.delete('/me/api-key', (req, res) => {
   db.prepare('UPDATE users SET api_key = NULL, updated_at = datetime(\'now\') WHERE id = ?')
     .run(req.user.id);
+  logAuthEvent(req.user.id, 'api_key_revoked', req);
   res.json({ revoked: true });
 });
 

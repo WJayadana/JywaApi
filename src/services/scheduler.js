@@ -13,8 +13,10 @@
 
 const config = require('../config');
 const pricelist = require('./pricelist');
+const { pruneOldLogs } = require('./auth-log');
 
 let timer = null;
+let pruneTimer = null;
 let running = false;
 let nextCmd = 'prepaid'; // round-robin state
 
@@ -48,14 +50,29 @@ function start() {
   tick();
   timer = setInterval(tick, intervalMs);
 
+  // Daily auth-log retention (90 days)
+  pruneTimer = setInterval(() => {
+    try {
+      const removed = pruneOldLogs(90);
+      if (removed > 0) console.log(`[auth-log] pruned ${removed} old entries`);
+    } catch (error) {
+      console.error(`[auth-log] prune failed: ${error.message}`);
+    }
+  }, 24 * 60 * 60 * 1000);
+
   // Don't keep the process alive solely for this timer
   if (timer.unref) timer.unref();
+  if (pruneTimer.unref) pruneTimer.unref();
 }
 
 function stop() {
   if (timer) {
     clearInterval(timer);
     timer = null;
+  }
+  if (pruneTimer) {
+    clearInterval(pruneTimer);
+    pruneTimer = null;
   }
 }
 

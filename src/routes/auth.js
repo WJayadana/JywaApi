@@ -5,6 +5,7 @@ const { randomUUID } = require('crypto');
 
 const db = require('../db');
 const config = require('../config');
+const { logAuthEvent } = require('../services/auth-log');
 const {
   PUBLIC_USER_COLUMNS,
   serializeUser,
@@ -83,6 +84,7 @@ router.post('/login', async (req, res, next) => {
       .get(identifier, identifier);
 
     if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+      if (user) logAuthEvent(user.id, 'login_failed', req);
       return res.status(401).json({
         error: 'Unauthorized',
         message: 'invalid credentials',
@@ -95,6 +97,7 @@ router.post('/login', async (req, res, next) => {
       });
     }
 
+    logAuthEvent(user.id, 'login_success', req);
     return res.json({
       user: serializeUser(user),
       token: issueToken(user.id),

@@ -65,6 +65,19 @@ CREATE TABLE IF NOT EXISTS transactions (
 CREATE INDEX IF NOT EXISTS idx_transactions_user ON transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);
 CREATE INDEX IF NOT EXISTS idx_transactions_created ON transactions(created_at);
+
+CREATE TABLE IF NOT EXISTS auth_logs (
+  id         TEXT PRIMARY KEY,
+  user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  event      TEXT NOT NULL CHECK (event IN
+             ('login_success','login_failed','api_key_generated','api_key_revoked','api_ip_rejected')),
+  ip         TEXT,
+  user_agent TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_auth_logs_user ON auth_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_auth_logs_created ON auth_logs(created_at);
 `);
 
 module.exports = db;

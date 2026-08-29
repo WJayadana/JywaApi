@@ -229,6 +229,48 @@ paths:
           $ref: '#/components/responses/ValidationError'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /api/users/me/activity:
+    get:
+      operationId: getMyActivity
+      tags: [Users]
+      summary: Log aktivitas auth milik user login
+      description: |-
+        Menampilkan audit trail auth milik user yang sedang login:
+        login sukses, login gagal, generate API key, dan revoke API key.
+        Log disimpan maksimal 90 hari lalu dibersihkan otomatis oleh scheduler.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: event
+          in: query
+          schema:
+            type: string
+            enum: [login_success, login_failed, api_key_generated, api_key_revoked]
+      responses:
+        '200':
+          description: Daftar aktivitas user login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthLogListResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/users:
     get:
       operationId: listUsers
@@ -1233,6 +1275,38 @@ components:
                 type: integer
               profit:
                 type: integer
+
+    AuthLogListResponse:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+        logs:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuthLog'
+    AuthLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        event:
+          type: string
+          enum: [login_success, login_failed, api_key_generated, api_key_revoked, api_ip_rejected]
+        ip:
+          type: [string, 'null']
+        user_agent:
+          type: [string, 'null']
+        created_at:
+          type: string
+          format: date-time
 
     ErrorResponse:
       type: object
