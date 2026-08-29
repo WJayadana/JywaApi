@@ -96,7 +96,7 @@ app.get('/docs', (_req, res) => {
   <title>Jywa API Docs</title>
   <link rel="stylesheet" href="/swagger-ui/swagger-ui.css" />
   <style>
-    html { box-sizing: border-box; overflow: hidden; }
+    html { box-sizing: border-box; }
     *, *:before, *:after { box-sizing: inherit; }
     body { margin: 0; padding: 0; }
   </style>
