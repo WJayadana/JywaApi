@@ -5,6 +5,7 @@ const db = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
 const { applyBalance } = require('../balance');
 const { logAuthEvent, EVENTS } = require('../services/auth-log');
+const { validateIpList } = require('../services/ip-whitelist');
 const {
   PUBLIC_USER_COLUMNS,
   serializeUser,
@@ -168,6 +169,30 @@ router.delete('/me/api-key', (req, res) => {
     .run(req.user.id);
   logAuthEvent(req.user.id, 'api_key_revoked', req);
   res.json({ revoked: true });
+});
+
+// ─── API key IP whitelist (self-service) ───────────────────────────
+// Empty list = allow all IPs (default). Requests from other IPs get 403.
+
+router.get('/me/api-key/ips', (req, res) => {
+  const row = db.prepare('SELECT api_key_ips FROM users WHERE id = ?').get(req.user.id);
+  let ips = [];
+  if (row && row.api_key_ips) {
+    try { ips = JSON.parse(row.api_key_ips) || []; } catch { ips = []; }
+  }
+  res.json({ ips });
+});
+
+router.put('/me/api-key/ips', (req, res) => {
+  const body = req.body || {};
+  const result = validateIpList(body.ips);
+  if (!result.ok) {
+    return res.status(400).json({ error: 'ValidationError', message: result.error });
+  }
+  const stored = result.ips.length ? JSON.stringify(result.ips) : null;
+  db.prepare("UPDATE users SET api_key_ips = ?, updated_at = datetime('now') WHERE id = ?")
+    .run(stored, req.user.id);
+  res.json({ ips: result.ips });
 });
 
 router.get('/', ownerOnly, (req, res) => {

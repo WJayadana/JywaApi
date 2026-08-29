@@ -80,4 +80,10 @@ CREATE INDEX IF NOT EXISTS idx_auth_logs_user ON auth_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_auth_logs_created ON auth_logs(created_at);
 `);
 
+// Lightweight migration: add api_key_ips to pre-existing databases.
+const userColumns = db.prepare("PRAGMA table_info('users')").all().map((column) => column.name);
+if (!userColumns.includes('api_key_ips')) {
+  db.exec('ALTER TABLE users ADD COLUMN api_key_ips TEXT');
+}
+
 module.exports = db;

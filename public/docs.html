@@ -391,6 +391,9 @@
         <a class="nav-item" data-target="get-me"><span class="method-badge method-get">GET</span> /api/users/me</a>
         <a class="nav-item" data-target="update-me"><span class="method-badge method-put">PUT</span> /api/users/me</a>
         <a class="nav-item" data-target="my-mutations"><span class="method-badge method-get">GET</span> /api/users/me/mutations</a>
+        <a class="nav-item" data-target="my-activity"><span class="method-badge method-get">GET</span> /api/users/me/activity</a>
+        <a class="nav-item" data-target="my-api-key-ips"><span class="method-badge method-get">GET</span> /api/users/me/api-key/ips</a>
+        <a class="nav-item" data-target="my-api-key-ips-put"><span class="method-badge method-put">PUT</span> /api/users/me/api-key/ips</a>
       </div>
       <div class="nav-section" data-section="owner">
         <div class="nav-section-title">Owner Only</div>
@@ -822,6 +825,54 @@
     }
   ]
 }</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+        <div class="endpoint" id="my-api-key-ips" data-method="GET" data-path="/api/users/me/api-key/ips" data-auth="true">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-get">GET</span>
+            <span class="endpoint-path">/api/users/me/api-key/ips</span>
+            <span class="endpoint-summary">Lihat IP whitelist API key</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Melihat daftar IP atau CIDR yang boleh memakai API key sendiri. Daftar kosong berarti semua IP diizinkan.</p>
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-label">Contoh Request</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre><code>curl https://jywa.tech/api/users/me/api-key/ips \
+  -H "Authorization: Bearer &lt;JWT token&gt;"</code></pre>
+            </div>
+            <div class="response-block">
+              <span class="response-status status-2xx">200 OK</span>
+              <div class="code-block">
+                <div class="code-block-header"><span class="code-block-label">Response</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{ "ips": ["203.0.113.10", "10.0.0.0/8"] }</code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="endpoint" id="my-api-key-ips-put" data-method="PUT" data-path="/api/users/me/api-key/ips" data-auth="true" data-body="ips">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="endpoint-method method-put">PUT</span>
+            <span class="endpoint-path">/api/users/me/api-key/ips</span>
+            <span class="endpoint-summary">Atur IP whitelist API key</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Replace seluruh daftar whitelist. Maksimal 20 entri. Kirim array kosong untuk mengizinkan semua IP kembali.</p>
+            <div class="code-block">
+              <div class="code-block-header"><span class="code-block-label">Contoh Body</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+              <pre><code>{ "ips": ["203.0.113.10", "10.0.0.0/8"] }</code></pre>
+            </div>
+            <div class="response-block">
+              <span class="response-status status-2xx">200 OK</span>
+              <div class="code-block">
+                <div class="code-block-header"><span class="code-block-label">Response</span><button class="copy-btn" onclick="copyCode(this)">Copy</button></div>
+                <pre><code>{ "ips": ["203.0.113.10", "10.0.0.0/8"] }</code></pre>
               </div>
             </div>
           </div>

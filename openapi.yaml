@@ -271,6 +271,52 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/users/me/api-key/ips:
+    get:
+      operationId: getMyApiKeyWhitelist
+      tags: [Users]
+      summary: IP whitelist untuk API key sendiri
+      description: |-
+        Daftar IP / CIDR yang diizinkan memakai API key user. Kosong artinya
+        semua IP boleh mengakses API v1.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Daftar IP whitelist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IpWhitelistResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    put:
+      operationId: putMyApiKeyWhitelist
+      tags: [Users]
+      summary: Atur IP whitelist untuk API key sendiri
+      description: |-
+        Replace seluruh daftar whitelist. Kirim `{ "ips": [] }` untuk mengizinkan
+        semua IP kembali. Maksimal 20 entri, masing-masing IP exact atau CIDR.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IpWhitelistRequest'
+      responses:
+        '200':
+          description: Whitelist terupdate
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IpWhitelistResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /api/users:
     get:
       operationId: listUsers
@@ -1307,6 +1353,25 @@ components:
         created_at:
           type: string
           format: date-time
+
+    IpWhitelistRequest:
+      type: object
+      required: [ips]
+      properties:
+        ips:
+          type: array
+          maxItems: 20
+          description: Daftar IP exact atau CIDR. Array kosong = izinkan semua IP.
+          items:
+            type: string
+            example: 203.0.113.10
+    IpWhitelistResponse:
+      type: object
+      properties:
+        ips:
+          type: array
+          items:
+            type: string
 
     ErrorResponse:
       type: object
