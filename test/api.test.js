@@ -61,15 +61,15 @@ test.after(async () => {
   fs.rmSync(tempDir, { recursive: true, force: true });
 });
 
-test('documentation routes serve themed docs and raw OpenAPI spec', async () => {
+test('documentation routes serve Swagger UI and raw OpenAPI spec', async () => {
   let response = await request('/docs');
   assert.equal(response.status, 200);
   assert.ok(response.contentType.includes('text/html'));
-  assert.ok(response.text.includes('Jywa API'));
-  assert.ok(response.text.includes('/api/auth/login'));
+  assert.ok(response.text.includes('swagger-ui') || response.text.includes('SwaggerUIBundle'));
 
   response = await request('/openapi.yaml');
   assert.equal(response.status, 200);
+  assert.ok(response.contentType.includes('application/yaml'));
   assert.ok(response.text.includes('openapi: 3.1.0'));
 });
 

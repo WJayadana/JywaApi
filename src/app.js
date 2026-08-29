@@ -79,7 +79,7 @@ app.get('/', (_req, res) => {
   res.json({ name: 'Jywa API', version: '1.0.0', health: '/health', docs: '/docs' });
 });
 
-// Serve OpenAPI spec and custom docs UI
+// Serve OpenAPI spec and Swagger UI
 app.get('/openapi.yaml', (_req, res) => {
   const specPath = path.join(__dirname, '..', 'openapi.yaml');
   res.setHeader('content-type', 'application/yaml; charset=utf-8');
@@ -87,10 +87,52 @@ app.get('/openapi.yaml', (_req, res) => {
 });
 
 app.get('/docs', (_req, res) => {
-  const docsPath = path.join(__dirname, '..', 'public', 'docs.html');
   res.setHeader('content-type', 'text/html; charset=utf-8');
-  res.send(fs.readFileSync(docsPath, 'utf-8'));
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Jywa API Docs</title>
+  <link rel="stylesheet" href="/swagger-ui/swagger-ui.css" />
+  <style>
+    html { box-sizing: border-box; overflow: hidden; }
+    *, *:before, *:after { box-sizing: inherit; }
+    body { margin: 0; padding: 0; }
+  </style>
+</head>
+<body>
+  <div id="swagger-ui"></div>
+  <script src="/swagger-ui/swagger-ui-bundle.js"></script>
+  <script>
+    window.addEventListener('load', function() {
+      SwaggerUIBundle({
+        url: '/openapi.yaml',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [SwaggerUIBundle.presets.apis, SwaggerUIBundle.SwaggerUIStandalonePreset],
+        layout: 'BaseLayout',
+        tryItOutEnabled: true,
+        requestInterceptor: function(req) {
+          // Inject API key from localStorage if present
+          var key = localStorage.getItem('jywa_api_token');
+          if (key && req.headers['Authorization'] === undefined) {
+            req.headers['Authorization'] = 'Bearer ' + key;
+          }
+          return req;
+        }
+      });
+    });
+  </script>
+</body>
+</html>`);
 });
+
+// Swagger UI static (before routes so it takes precedence)
+app.use('/swagger-ui', express.static(path.join(__dirname, '..', 'node_modules/swagger-ui-dist')));
+
+// Public static files (CSS, images, etc.)
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/users', userRoutes);
