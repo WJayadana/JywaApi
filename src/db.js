@@ -107,6 +107,22 @@ CREATE TABLE IF NOT EXISTS webhook_deliveries (
 );
 CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_user ON webhook_deliveries(user_id);
 CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_created ON webhook_deliveries(created_at);
+
+-- QRIS deposit via GoBiz
+CREATE TABLE IF NOT EXISTS deposits (
+  id                TEXT PRIMARY KEY,
+  user_id           TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  amount            INTEGER NOT NULL CHECK (amount > 0),
+  expected_amount   INTEGER NOT NULL CHECK (expected_amount > 0),
+  gobiz_payment_id  TEXT NOT NULL,
+  status            TEXT NOT NULL DEFAULT 'pending'
+                    CHECK (status IN ('pending','paid','expired','cancelled','credited')),
+  paid_at           TEXT,
+  credited_at       TEXT,
+  created_at        TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_deposits_user ON deposits(user_id);
+CREATE INDEX IF NOT EXISTS idx_deposits_status ON deposits(status);
 `);
 
 module.exports = db;

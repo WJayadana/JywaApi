@@ -8,6 +8,7 @@ const path = require('path');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const digiflazzRoutes = require('./routes/digiflazz');
+const depositRoutes = require('./routes/deposits');
 const v1Routes = require('./routes/v1');
 const { v1Router: v1StatsRouter, legacyRouter: statsRouter } = require('./routes/stats');
 const scheduler = require('./services/scheduler');
@@ -55,6 +56,50 @@ app.post(
     });
   }
 );
+
+// GoBiz webhook — must consume raw body before express.json()
+app.post('/api/gobiz/webhook', express.raw({ type: 'application/json', limit: '100kb' }), (req, res) => {
+  const crypto = require('node:crypto');
+  const gobiz = require('./services/gobiz-client');
+  const db = require('./db');
+
+  const signature = req.headers['x-signature'] || '';
+  if (!gobiz.verifyWebhookSignature(req.body, signature)) {
+    return res.status(401).json({ error: 'Unauthorized', message: 'invalid signature' });
+  }
+
+  let payload = null;
+  try { payload = JSON.parse(req.body.toString()); } catch (_) {
+    return res.status(400).json({ error: 'BadRequest', message: 'invalid JSON' });
+  }
+
+  const { id, status, order_id, amount, expected_amount } = payload || {};
+  if (!id || !status) return res.status(400).json({ error: 'BadRequest', message: 'missing id or status' });
+
+  // Find deposit by gobiz payment id via order_id metadata
+  // order_id format: DP-{timestamp}-{user_id}
+  const userId = order_id?.split('-').slice(2).join('-') || null;
+  if (!userId) return res.status(400).json({ received: true });
+
+  const deposit = db.prepare('SELECT * FROM deposits WHERE gobiz_payment_id = ?').get(id);
+  if (!deposit) return res.status(404).json({ error: 'NotFound', message: 'deposit not found' });
+
+  if (deposit.status !== 'pending') return res.status(200).json({ received: true, status: deposit.status });
+
+  if (status === 'paid') {
+    db.prepare(`UPDATE deposits SET status = 'paid', paid_at = datetime('now') WHERE id = ?`).run(deposit.id);
+    db.prepare(`UPDATE users SET balance = balance + ? WHERE id = ?`).run(deposit.amount, deposit.user_id);
+    db.prepare(`INSERT INTO mutations (id, user_id, type, direction, amount, note) VALUES (?,?,?,?,?,?)`).run(
+      crypto.randomUUID(), deposit.user_id, 'deposit', '+', deposit.amount,
+      `QRIS Deposit ${deposit.expected_amount} → credited (gobiz: ${id})`
+    );
+    db.prepare(`UPDATE deposits SET status = 'credited', credited_at = datetime('now') WHERE id = ?`).run(deposit.id);
+  } else if (status === 'expired' || status === 'cancelled') {
+    db.prepare(`UPDATE deposits SET status = ? WHERE id = ?`).run(status, deposit.id);
+  }
+
+  res.status(200).json({ received: true, status: 'ok' });
+});
 
 app.use(express.json({ limit: '100kb' }));
 
@@ -137,6 +182,7 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/digiflazz', digiflazzRoutes);
+app.use('/api/deposits', depositRoutes);
 app.use('/api/v1/stats', require('./middleware/api-key').apiKeyAuth, v1StatsRouter);
 app.use('/api/v1', v1Routes);
 app.use('/api/stats', statsRouter);

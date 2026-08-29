@@ -1183,6 +1183,146 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  # ─── QRIS Deposit ───────────────────────────────────────────────
+  /api/deposits:
+    post:
+      operationId: createDeposit
+      tags: [Deposits]
+      summary: Buat invoice deposit via QRIS
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:
+                  type: integer
+                  description: Nominal deposit dalam Rupiah (min 1000)
+                  minimum: 1000
+                  maximum: 10000000
+                  example: 50000
+      responses:
+        '201':
+          description: Invoice QRIS berhasil dibuat
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deposit_id: { type: string, format: uuid }
+                  gobiz_payment_id: { type: string }
+                  amount: { type: integer }
+                  expected_amount: { type: integer }
+                  qris_string: { type: string }
+                  status: { type: string, enum: [pending] }
+                  expires_in: { type: integer }
+                  created_at: { type: string, format: date-time }
+        '400':
+          description: Request tidak valid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '502':
+          description: GoBiz upstream error
+
+    get:
+      operationId: listDeposits
+      tags: [Deposits]
+      summary: Daftar deposit saya
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, maximum: 100 }
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, paid, expired, cancelled, credited] }
+      responses:
+        '200':
+          description: Daftar deposit
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deposits:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DepositRecord'
+                  total: { type: integer }
+                  page: { type: integer }
+                  limit: { type: integer }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/deposits/{id}:
+    get:
+      operationId: getDeposit
+      tags: [Deposits]
+      summary: Detail deposit
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Detail deposit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DepositRecord'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/deposits/{id}/cancel:
+    post:
+      operationId: cancelDeposit
+      tags: [Deposits]
+      summary: Batalkan invoice deposit pending
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Deposit dibatalkan
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id: { type: string }
+                  status: { type: string, enum: [cancelled] }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Tidak bisa dibatalkan (sudah tidak pending)
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1202,6 +1342,14 @@ components:
       schema:
         type: string
         format: uuid
+    DepositId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+        description: Deposit UUID
   responses:
     ValidationError:
       description: Request tidak valid
@@ -1680,3 +1828,37 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/User'
+
+    DepositRecord:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        amount:
+          type: integer
+          description: Nominal deposit
+          example: 50000
+        expected_amount:
+          type: integer
+          description: Nominal yang harus dibayar (base + unique suffix)
+          example: 50087
+        gobiz_payment_id:
+          type: string
+          description: ID payment di GoBiz
+        status:
+          type: string
+          enum: [pending, paid, expired, cancelled, credited]
+          example: pending
+        paid_at:
+          type: string
+          format: date-time
+        credited_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
