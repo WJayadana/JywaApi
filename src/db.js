@@ -70,7 +70,7 @@ CREATE TABLE IF NOT EXISTS auth_logs (
   id         TEXT PRIMARY KEY,
   user_id    TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   event      TEXT NOT NULL CHECK (event IN
-             ('login_success','login_failed','api_key_generated','api_key_revoked','api_ip_rejected')),
+             ('login_success','login_failed','api_key_generated','api_key_revoked','api_ip_rejected','refresh')),
   ip         TEXT,
   user_agent TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -123,6 +123,24 @@ CREATE TABLE IF NOT EXISTS deposits (
 );
 CREATE INDEX IF NOT EXISTS idx_deposits_user ON deposits(user_id);
 CREATE INDEX IF NOT EXISTS idx_deposits_status ON deposits(status);
+
+-- Refresh tokens (auth_tokens) + rate limits (rate_limits)
+CREATE TABLE IF NOT EXISTS auth_tokens (
+  id          TEXT PRIMARY KEY,
+  user_id     TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  token_hash  TEXT NOT NULL,
+  expires_at  TEXT NOT NULL,
+  revoked_at  TEXT,
+  created_at  TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_auth_tokens_user  ON auth_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_auth_tokens_hash  ON auth_tokens(token_hash);
+
+CREATE TABLE IF NOT EXISTS rate_limits (
+  user_id      TEXT PRIMARY KEY,
+  window_start INTEGER NOT NULL,
+  count        INTEGER NOT NULL DEFAULT 0
+);
 `);
 
 module.exports = db;

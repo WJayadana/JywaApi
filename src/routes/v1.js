@@ -4,6 +4,7 @@ const { randomUUID } = require('node:crypto');
 const db = require('../db');
 const { applyBalance } = require('../balance');
 const { apiKeyAuth } = require('../middleware/api-key');
+const { rateLimitByApiKey } = require('../middleware/rate-limit');
 const pricelist = require('../services/pricelist');
 const Digiflazz = require('../providers/digiflazz');
 const { DigiflazzError } = require('../providers/digiflazz');
@@ -92,6 +93,7 @@ function updateTransaction(id, fields) {
 }
 
 router.use(apiKeyAuth);
+router.use(rateLimitByApiKey());
 
 // GET /api/v1/profile
 router.get('/profile', (req, res) => {
