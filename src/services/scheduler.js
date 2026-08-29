@@ -14,9 +14,11 @@
 const config = require('../config');
 const pricelist = require('./pricelist');
 const { pruneOldLogs } = require('./auth-log');
+const { pollPendingDeposits } = require('../scheduler/deposit-poller');
 
 let timer = null;
 let pruneTimer = null;
+let depositTimer = null;
 let running = false;
 let nextCmd = 'prepaid'; // round-robin state
 
@@ -50,6 +52,12 @@ function start() {
   tick();
   timer = setInterval(tick, intervalMs);
 
+  // Deposit QRIS status poller (every 15s — api.jywa.app polls GoBiz)
+  const depositPollMs = 15_000;
+  depositTimer = setInterval(() => { pollPendingDeposits(); }, depositPollMs);
+  if (depositTimer.unref) depositTimer.unref();
+  console.log(`[deposit-poller] enabled (every ${depositPollMs / 1000}s)`);
+
   // Daily auth-log retention (90 days)
   pruneTimer = setInterval(() => {
     try {
@@ -66,14 +74,9 @@ function start() {
 }
 
 function stop() {
-  if (timer) {
-    clearInterval(timer);
-    timer = null;
-  }
-  if (pruneTimer) {
-    clearInterval(pruneTimer);
-    pruneTimer = null;
-  }
+  if (timer) { clearInterval(timer); timer = null; }
+  if (pruneTimer) { clearInterval(pruneTimer); pruneTimer = null; }
+  if (depositTimer) { clearInterval(depositTimer); depositTimer = null; }
 }
 
 module.exports = { start, stop, tick };
