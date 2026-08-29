@@ -10,6 +10,7 @@ const Digiflazz = require('../providers/digiflazz');
 const { DigiflazzError } = require('../providers/digiflazz');
 const config = require('../config');
 const { dispatch } = require('../services/webhook-reseller');
+const { watchPendingTransaction } = require('../services/transaction-retry');
 
 const router = express.Router();
 
@@ -209,6 +210,17 @@ router.post('/transactions', async (req, res, next) => {
       const txn = getTransaction(req.user.id, refId);
       dispatch(req.user.id, 'transaction.update', publicTransaction(txn));
       return res.status(201).json(publicTransaction(txn));
+    }
+
+    // Upstream returned Pending: keep the debit, answer 202, and watch in the
+    // background. Digiflazz lets you re-query with the same ref_id (idempotent).
+    if (providerStatus(upstream) === 'pending') {
+      updateTransaction(transactionId, {
+        provider_rc: rc,
+        provider_msg: message || 'transaction pending',
+      });
+      watchPendingTransaction(transactionId);
+      return res.status(202).json(publicTransaction(getTransaction(req.user.id, refId)));
     }
 
     // Upstream declined: refund the exact debit and mark transaction failed.

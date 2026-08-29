@@ -15,6 +15,7 @@ const config = require('../config');
 const pricelist = require('./pricelist');
 const { pruneOldLogs } = require('./auth-log');
 const { pollPendingDeposits } = require('../scheduler/deposit-poller');
+const { resumePendingWatchers } = require('./transaction-retry');
 
 let timer = null;
 let pruneTimer = null;
@@ -57,6 +58,9 @@ function start() {
   depositTimer = setInterval(() => { pollPendingDeposits(); }, depositPollMs);
   if (depositTimer.unref) depositTimer.unref();
   console.log(`[deposit-poller] enabled (every ${depositPollMs / 1000}s)`);
+
+  // Resume watching transactions left 'pending' by a previous process
+  resumePendingWatchers();
 
   // Daily auth-log retention (90 days)
   pruneTimer = setInterval(() => {
