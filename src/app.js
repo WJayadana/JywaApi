@@ -8,6 +8,7 @@ const path = require('path');
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/users');
 const digiflazzRoutes = require('./routes/digiflazz');
+const v1Routes = require('./routes/v1');
 const scheduler = require('./services/scheduler');
 const config = require('./config');
 const db = require('./db');
@@ -90,6 +91,7 @@ app.get('/docs', (_req, res) => {
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/digiflazz', digiflazzRoutes);
+app.use('/api/v1', v1Routes);
 
 app.use((_req, res) => {
   res.status(404).json({ error: 'NotFound', message: 'route not found' });

@@ -29,6 +29,8 @@ tags:
     description: Endpoint khusus role owner
   - name: Digiflazz
     description: Provider PPOB Digiflazz (khusus owner)
+  - name: API v1
+    description: Public API untuk reseller (autentikasi via API key)
 paths:
   /:
     get:
@@ -719,12 +721,235 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /api/users/me/api-key:
+    post:
+      operationId: generateApiKey
+      tags: [Users]
+      summary: Generate API key baru
+      description: Membuat API key baru untuk API v1 (format jywa_live_xxx). Key lama otomatis diganti.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: API key baru
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  api_key:
+                    type: string
+                    example: jywa_live_1a2b3c4d5e6f7890
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    delete:
+      operationId: revokeApiKey
+      tags: [Users]
+      summary: Revoke API key
+      description: Menghapus API key aktif. Semua request API v1 dengan key lama akan ditolak.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: API key dihapus
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  revoked:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/profile:
+    get:
+      operationId: v1GetProfile
+      tags: [API v1]
+      summary: Profil akun
+      description: Info akun pemilik API key, termasuk saldo dan role.
+      security:
+        - apiKeyAuth: []
+      responses:
+        '200':
+          description: Profil user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  username: { type: string }
+                  email: { type: string }
+                  phone: { type: string }
+                  role: { type: string, enum: [owner, bronze, silver, gold, reseller] }
+                  balance: { type: integer }
+                  status: { type: string }
+                  created_at: { type: string }
+                  updated_at: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/v1/products:
+    get:
+      operationId: v1ListProducts
+      tags: [API v1]
+      summary: Daftar produk dengan harga role Anda
+      description: |
+        Daftar produk aktif dari cache. Field harga adalah HARGA UNTUK ROLE ANDA (single number).
+        Tidak ada harga_modal atau harga role lain. Hanya produk aktif yang ditampilkan.
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: cmd
+          in: query
+          schema: { type: string, enum: [prepaid, pasca], default: prepaid }
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: search
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Daftar produk
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        buyer_sku_code: { type: string }
+                        product_name: { type: string }
+                        category: { type: string }
+                        brand: { type: string }
+                        harga: { type: integer, description: Harga sesuai role Anda }
+                  role: { type: string }
+                  source: { type: string }
+                  last_updated: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/transactions:
+    post:
+      operationId: v1CreateTransaction
+      tags: [API v1]
+      summary: Buat transaksi (beli produk)
+      description: |
+        Membeli produk. Saldo dipotong otomatis sesuai harga role Anda.
+        Idempotent per ref_id — mengirim ref_id yang sama mengembalikan transaksi sebelumnya (200) tanpa charge ulang.
+        Jika transaksi gagal di provider, saldo di-refund otomatis.
+      security:
+        - apiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sku, customer_no, ref_id]
+              properties:
+                sku: { type: string, example: xld25 }
+                customer_no: { type: string, example: '081234567890' }
+                ref_id: { type: string, example: trx-001, maxLength: 100 }
+      responses:
+        '201':
+          description: Transaksi sukses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1Transaction'
+        '200':
+          description: Duplicate ref_id — transaksi sebelumnya dikembalikan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1Transaction'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '402':
+          description: Saldo tidak mencukupi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '502':
+          description: Transaksi ditolak provider (saldo sudah di-refund)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1Transaction'
+    get:
+      operationId: v1ListTransactions
+      tags: [API v1]
+      summary: Riwayat transaksi
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, maximum: 100 }
+      responses:
+        '200':
+          description: Riwayat transaksi milik pemilik API key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  page: { type: integer }
+                  limit: { type: integer }
+                  total: { type: integer }
+                  pages: { type: integer }
+                  transactions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/V1Transaction'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/v1/transactions/{ref_id}:
+    get:
+      operationId: v1GetTransaction
+      tags: [API v1]
+      summary: Cek status transaksi
+      security:
+        - apiKeyAuth: []
+      parameters:
+        - name: ref_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Detail transaksi
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/V1Transaction'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+    apiKeyAuth:
+      type: http
+      scheme: bearer
+      description: API key (jywa_live_xxx) dikirim sebagai Bearer token
   parameters:
     UserId:
       name: id
@@ -813,6 +1038,20 @@ components:
               code:
                 type: string
   schemas:
+    V1Transaction:
+      type: object
+      properties:
+        id: { type: string }
+        ref_id: { type: string }
+        sku: { type: string }
+        customer_no: { type: string }
+        harga: { type: integer }
+        status: { type: string, enum: [pending, success, failed, refunded] }
+        sn: { type: string, description: Serial number dari provider (jika sukses) }
+        provider_rc: { type: string }
+        message: { type: string }
+        created_at: { type: string }
+        updated_at: { type: string }
     DigiflazzProduct:
       type: object
       additionalProperties: true

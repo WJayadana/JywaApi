@@ -410,6 +410,14 @@
         <a class="nav-item" data-target="digi-transaksi"><span class="method-badge method-post">POST</span> /api/digiflazz/transaksi</a>
         <a class="nav-item" data-target="digi-webhook"><span class="method-badge method-post">POST</span> /api/digiflazz/webhook</a>
       </div>
+      <div class="nav-section" data-section="api-v1">
+        <div class="nav-section-title">API v1 (Reseller)</div>
+        <a class="nav-item" data-target="v1-profile"><span class="method-badge method-get">GET</span> /api/v1/profile</a>
+        <a class="nav-item" data-target="v1-products"><span class="method-badge method-get">GET</span> /api/v1/products</a>
+        <a class="nav-item" data-target="v1-transactions"><span class="method-badge method-post">POST</span> /api/v1/transactions</a>
+        <a class="nav-item" data-target="v1-list-transactions"><span class="method-badge method-get">GET</span> /api/v1/transactions</a>
+        <a class="nav-item" data-target="v1-get-transaction"><span class="method-badge method-get">GET</span> /api/v1/transactions/:ref_id</a>
+      </div>
       <div class="nav-section" data-section="schemas">
         <div class="nav-section-title">Schemas</div>
         <a class="nav-item" data-target="schema-user">User</a>
@@ -1023,6 +1031,78 @@
               <span class="response-status status-4xx">401 Unauthorized</span>
               <div class="code-block"><div class="code-block-header"><span class="code-block-label">Signature salah / hilang</span></div><pre><code>{ "error": "Unauthorized", "message": "invalid signature" }</code></pre></div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== API V1 ===== -->
+      <div class="section" id="api-v1-section">
+        <div class="section-header"><h2 id="api-v1">API v1 — Public Reseller API</h2></div>
+        <p class="section-desc">Public API untuk reseller. Auth via API key (<code>jywa_live_xxx</code>) sebagai Bearer token. Harga otomatis sesuai role pemanggil.</p>
+
+        <div class="endpoint" id="v1-profile" data-method="GET" data-path="/api/v1/profile" data-auth="true">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method-badge method-get">GET</span>
+            <span class="endpoint-path">/api/v1/profile</span>
+            <span class="endpoint-summary">Info akun + saldo</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Info akun pemilik API key: username, email, phone, role, balance, status.</p>
+          </div>
+        </div>
+
+        <div class="endpoint" id="v1-products" data-method="GET" data-path="/api/v1/products" data-auth="true" data-query="cmd,category,search">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method-badge method-get">GET</span>
+            <span class="endpoint-path">/api/v1/products</span>
+            <span class="endpoint-summary">Daftar produk + harga role Anda</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Daftar produk aktif dari cache. <strong>harga</strong> = harga untuk role Anda (single number). Tidak ada harga_modal atau harga role lain.</p>
+          </div>
+        </div>
+
+        <div class="endpoint" id="v1-transactions" data-method="POST" data-path="/api/v1/transactions" data-auth="true" data-body="sku,customer_no,ref_id">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method-badge method-post">POST</span>
+            <span class="endpoint-path">/api/v1/transactions</span>
+            <span class="endpoint-summary">Beli produk (potong saldo otomatis)</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Membeli produk. Saldo dipotong sesuai harga role Anda. <strong>Idempotent</strong> per <code>ref_id</code>. Gagal = <strong>auto-refund</strong>.</p>
+            <div class="params-title">Request Body</div>
+            <table class="params-table"><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Deskripsi</th></tr></thead><tbody>
+              <tr><td>sku<span class="param-required">*</span></td><td><span class="param-type">string</span></td><td>Ya</td><td><code>buyer_sku_code</code></td></tr>
+              <tr><td>customer_no<span class="param-required">*</span></td><td><span class="param-type">string</span></td><td>Ya</td><td>Nomor tujuan</td></tr>
+              <tr><td>ref_id<span class="param-required">*</span></td><td><span class="param-type">string</span></td><td>Ya</td><td>ID referensi unik (max 100)</td></tr>
+            </tbody></table>
+          </div>
+        </div>
+
+        <div class="endpoint" id="v1-list-transactions" data-method="GET" data-path="/api/v1/transactions" data-auth="true" data-query="page,limit">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method-badge method-get">GET</span>
+            <span class="endpoint-path">/api/v1/transactions</span>
+            <span class="endpoint-summary">Riwayat transaksi</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Riwayat transaksi milik pemilik API key, paginated.</p>
+          </div>
+        </div>
+
+        <div class="endpoint" id="v1-get-transaction" data-method="GET" data-path="/api/v1/transactions/:ref_id" data-auth="true" data-params="ref_id">
+          <div class="endpoint-header" onclick="toggleEndpoint(this)">
+            <span class="method-badge method-get">GET</span>
+            <span class="endpoint-path">/api/v1/transactions/:ref_id</span>
+            <span class="endpoint-summary">Cek status transaksi</span>
+            <svg class="endpoint-chevron" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+          </div>
+          <div class="endpoint-body">
+            <p class="endpoint-desc">Cek status satu transaksi by <code>ref_id</code>.</p>
           </div>
         </div>
       </div>

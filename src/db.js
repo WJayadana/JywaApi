@@ -43,6 +43,28 @@ CREATE INDEX IF NOT EXISTS idx_users_role   ON users(role);
 CREATE INDEX IF NOT EXISTS idx_users_status ON users(status);
 CREATE INDEX IF NOT EXISTS idx_mutations_user ON mutations(user_id);
 CREATE INDEX IF NOT EXISTS idx_mutations_created ON mutations(created_at);
+
+CREATE TABLE IF NOT EXISTS transactions (
+  id             TEXT PRIMARY KEY,
+  user_id        TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  ref_id         TEXT NOT NULL,
+  sku            TEXT NOT NULL,
+  customer_no    TEXT NOT NULL,
+  harga          INTEGER NOT NULL,
+  harga_modal    INTEGER NOT NULL,
+  status         TEXT NOT NULL DEFAULT 'pending'
+                 CHECK (status IN ('pending','success','failed','refunded')),
+  sn             TEXT,
+  provider_rc    TEXT,
+  provider_msg   TEXT,
+  created_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at     TEXT NOT NULL DEFAULT (datetime('now')),
+  UNIQUE (user_id, ref_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_transactions_user ON transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);
+CREATE INDEX IF NOT EXISTS idx_transactions_created ON transactions(created_at);
 `);
 
 module.exports = db;

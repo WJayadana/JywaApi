@@ -1,4 +1,5 @@
 const express = require('express');
+const { randomUUID } = require('node:crypto');
 
 const db = require('../db');
 const { authenticate, requireRole } = require('../middleware/auth');
@@ -118,6 +119,24 @@ router.get('/me/mutations', (req, res) => {
   const result = getMutations(req.user.id, req.query);
   if (result.error) return res.status(400).json({ error: 'ValidationError', message: result.error });
   res.json(result);
+});
+
+/** Generate a fresh API key for the caller. Any existing key is replaced. */
+function generateApiKey() {
+  return 'jywa_live_' + randomUUID().replace(/-/g, '');
+}
+
+router.post('/me/api-key', (req, res) => {
+  const apiKey = generateApiKey();
+  db.prepare("UPDATE users SET api_key = ?, updated_at = datetime('now') WHERE id = ?")
+    .run(apiKey, req.user.id);
+  res.json({ api_key: apiKey });
+});
+
+router.delete('/me/api-key', (req, res) => {
+  db.prepare('UPDATE users SET api_key = NULL, updated_at = datetime(\'now\') WHERE id = ?')
+    .run(req.user.id);
+  res.json({ revoked: true });
 });
 
 router.get('/', ownerOnly, (req, res) => {
